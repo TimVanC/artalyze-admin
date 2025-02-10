@@ -1,7 +1,5 @@
+import { BASE_URL } from "./config";
 import axios from 'axios';
-
-// Define the Base URL for the backend
-const BASE_URL = 'https://artalyze-backend-production.up.railway.app/api';
 
 // Create an instance of Axios for the Admin console
 const axiosInstance = axios.create({

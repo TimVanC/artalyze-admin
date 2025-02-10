@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { format } from 'date-fns';
+import { BASE_URL } from "../config";
 import Calendar from 'react-calendar';
 import 'react-calendar/dist/Calendar.css'; // Import calendar styles
 import DropzoneComponent from './DropzoneComponent';
@@ -24,6 +25,7 @@ const ManageDay = () => {
       const response = await axiosInstance.get(
         `/admin/get-image-pairs-by-date/${utcDate.toISOString()}`
       );
+      
 
       console.log('Fetched Image Pairs:', response.data);
 
@@ -93,11 +95,10 @@ const ManageDay = () => {
           formData.append('scheduledDate', date.toISOString()); // Format to match backend expectation
           formData.append('pairIndex', i);
 
-          await axios.post('http://localhost:5000/api/admin/upload-image-pair', formData, {
-            headers: {
-              'Content-Type': 'multipart/form-data',
-            },
+          axios.post("https://artalyze-backend-production.up.railway.app/api/admin/upload-image-pair", formData, {
+            headers: { "Content-Type": "multipart/form-data" },
           });
+          
         }
       }
 
