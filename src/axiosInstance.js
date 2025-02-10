@@ -1,9 +1,11 @@
-// artalyze-admin/src/axiosInstance.js
 import axios from 'axios';
+
+// Define the Base URL for the backend
+const BASE_URL = 'https://artalyze-backend-production.up.railway.app/api';
 
 // Create an instance of Axios for the Admin console
 const axiosInstance = axios.create({
-  baseURL: 'http://localhost:5000/api', // Update the baseURL if needed for your backend routes
+  baseURL: BASE_URL, // Updated to use deployed backend
   withCredentials: true, // Include credentials if needed
   headers: {
     'Content-Type': 'application/json',
