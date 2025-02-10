@@ -1,1 +1,1 @@
-export const BASE_URL = 'https://artalyze-backend-production.up.railway.app/api';
+export const BASE_URL = "https://artalyze-backend-production.up.railway.app/api";
