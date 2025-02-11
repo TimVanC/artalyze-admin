@@ -70,32 +70,31 @@ const fetchImagePairs = useCallback(async () => {
       setUploadMessage('Please select a date first.');
       return;
     }
-
+  
     try {
       const date = new Date(selectedDate);
       const isDaylightSaving = date.getMonth() >= 2 && date.getMonth() <= 10; // DST
-      if (isDaylightSaving) {
-        date.setUTCHours(4, 0, 0, 0); // EDT
-      } else {
-        date.setUTCHours(5, 0, 0, 0); // EST
-      }
-
+      date.setUTCHours(isDaylightSaving ? 4 : 5, 0, 0, 0); // Adjust EST/EDT
+  
       for (let i = 0; i < imagePairs.length; i++) {
         const pair = imagePairs[i];
         if (pair && pair.human && pair.ai) {
           const formData = new FormData();
           formData.append('humanImage', pair.human);
           formData.append('aiImage', pair.ai);
-          formData.append('scheduledDate', date.toISOString()); // Format to match backend expectation
+          formData.append('scheduledDate', date.toISOString());
           formData.append('pairIndex', i);
-
-          axios.post("https://artalyze-backend-production.up.railway.app/api/admin/upload-image-pair", formData, {
-            headers: { "Content-Type": "multipart/form-data" },
-          });
-          
+  
+          await new Promise((resolve) => setTimeout(resolve, 200)); // Delay between requests
+  
+          await axios.post(
+            "https://artalyze-backend-production.up.railway.app/api/admin/upload-image-pair", 
+            formData, 
+            { headers: { "Content-Type": "multipart/form-data" } }
+          );
         }
       }
-
+  
       setUploadMessage('All images uploaded successfully');
       fetchImagePairs(); // Refresh the image pairs
     } catch (error) {
@@ -103,6 +102,7 @@ const fetchImagePairs = useCallback(async () => {
       setUploadMessage('Failed to upload some or all images. Please try again.');
     }
   };
+  
 
   return (
     <div className="manage-day-container">
