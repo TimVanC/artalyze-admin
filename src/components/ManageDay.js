@@ -13,6 +13,7 @@ const ManageDay = () => {
   const [imagePairs, setImagePairs] = useState([]); // State to store the fetched image pairs
   const [error, setError] = useState(null); // State for managing error messages
   const [uploadMessage, setUploadMessage] = useState(''); // State for managing upload messages
+  
 
   const fetchImagePairs = useCallback(async () => {
     try {
