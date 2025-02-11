@@ -12,7 +12,7 @@ const Login = () => {
   const handleLogin = async (e) => {
     e.preventDefault();
     try {
-      const response = await axiosInstance.post('/auth/admin/login', { email, password });
+      const response = await axiosInstance.post('/admin/login', { email, password });
       localStorage.setItem('adminToken', response.data.token);
       navigate('/overview'); // Redirect to the overview page after successful login
     } catch (error) {
