@@ -13,35 +13,28 @@ const ManageDay = () => {
   const [imagePairs, setImagePairs] = useState([]); // State to store the fetched image pairs
   const [error, setError] = useState(null); // State for managing error messages
   const [uploadMessage, setUploadMessage] = useState(''); // State for managing upload messages
-  
 
-  const fetchImagePairs = useCallback(async () => {
-    try {
-      // Normalize selected date to UTC midnight
-      const utcDate = new Date(selectedDate);
-      utcDate.setUTCHours(5, 0, 0, 0); // Match UTC 5:00 AM as stored in the database
 
-      console.log('Normalized Date for Fetch (UTC):', utcDate.toISOString());
+const fetchImagePairs = useCallback(async () => {
+  try {
+    const adjustedDate = new Date(selectedDate);
+    adjustedDate.setUTCHours(5, 0, 0, 0); // Convert to EST/EDT format
+    const formattedDate = adjustedDate.toISOString().split("T")[0]; // Ensure only YYYY-MM-DD
 
-      const response = await axiosInstance.get(
-        `/admin/get-image-pairs-by-date/${utcDate.toISOString()}`
-      );
-      
-
-      console.log('Fetched Image Pairs:', response.data);
-
-      if (response.data && response.data.pairs) {
-        setImagePairs(response.data.pairs); // Set state with the fetched image pairs
-      } else {
-        console.warn('No image pairs available for the selected date.');
-        setImagePairs([]); // Set an empty array if no pairs are found
-      }
-    } catch (error) {
-      console.error('Error fetching image pairs:', error);
-      // setError('Failed to load image pairs. Please try again later.');
-      setImagePairs([]); // Set an empty array in case of an error
+    console.log('Fetching Image Pairs for:', formattedDate);
+    const response = await axiosInstance.get(`/admin/get-image-pairs-by-date/${formattedDate}`);
+    
+    if (response.data && response.data.pairs) {
+      setImagePairs(response.data.pairs);
+    } else {
+      setImagePairs([]);
     }
-  }, [selectedDate]); // Recreate only when `selectedDate` changes
+  } catch (error) {
+    console.error('Error fetching image pairs:', error);
+    setImagePairs([]);
+  }
+}, [selectedDate]);
+
 
   useEffect(() => {
     fetchImagePairs();
