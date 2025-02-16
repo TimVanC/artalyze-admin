@@ -88,10 +88,11 @@ const fetchImagePairs = useCallback(async () => {
           await new Promise((resolve) => setTimeout(resolve, 200)); // Delay between requests
   
           await axios.post(
-            "https://artalyze-backend-production.up.railway.app/api/admin/upload-image-pair", 
-            formData, 
+            "https://artalyze-backend-staging.up.railway.app/api/admin/upload-image-pair", 
+            { ...formData, collection: "staging_imagePairs" }, // Explicitly set collection
             { headers: { "Content-Type": "multipart/form-data" } }
           );
+          
         }
       }
   
