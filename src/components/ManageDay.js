@@ -15,25 +15,25 @@ const ManageDay = () => {
   const [uploadMessage, setUploadMessage] = useState(''); // State for managing upload messages
 
 
-const fetchImagePairs = useCallback(async () => {
-  try {
-    const adjustedDate = new Date(selectedDate);
-    adjustedDate.setUTCHours(5, 0, 0, 0); // Convert to EST/EDT format
-    const formattedDate = adjustedDate.toISOString().split("T")[0]; // Ensure only YYYY-MM-DD
+  const fetchImagePairs = useCallback(async () => {
+    try {
+      const adjustedDate = new Date(selectedDate);
+      adjustedDate.setUTCHours(5, 0, 0, 0); // Convert to EST/EDT format
+      const formattedDate = adjustedDate.toISOString().split("T")[0]; // Ensure only YYYY-MM-DD
 
-    console.log('Fetching Image Pairs for:', formattedDate);
-    const response = await axiosInstance.get(`/admin/get-image-pairs-by-date/${formattedDate}`);
-    
-    if (response.data && response.data.pairs) {
-      setImagePairs(response.data.pairs);
-    } else {
+      console.log('Fetching Image Pairs for:', formattedDate);
+      const response = await axiosInstance.get(`/admin/get-image-pairs-by-date/${formattedDate}`);
+
+      if (response.data && response.data.pairs) {
+        setImagePairs(response.data.pairs);
+      } else {
+        setImagePairs([]);
+      }
+    } catch (error) {
+      console.error('Error fetching image pairs:', error);
       setImagePairs([]);
     }
-  } catch (error) {
-    console.error('Error fetching image pairs:', error);
-    setImagePairs([]);
-  }
-}, [selectedDate]);
+  }, [selectedDate]);
 
 
   useEffect(() => {
@@ -70,12 +70,12 @@ const fetchImagePairs = useCallback(async () => {
       setUploadMessage('Please select a date first.');
       return;
     }
-  
+
     try {
       const date = new Date(selectedDate);
       const isDaylightSaving = date.getMonth() >= 2 && date.getMonth() <= 10; // DST
       date.setUTCHours(isDaylightSaving ? 4 : 5, 0, 0, 0); // Adjust EST/EDT
-  
+
       for (let i = 0; i < imagePairs.length; i++) {
         const pair = imagePairs[i];
         if (pair && pair.human && pair.ai) {
@@ -84,18 +84,33 @@ const fetchImagePairs = useCallback(async () => {
           formData.append('aiImage', pair.ai);
           formData.append('scheduledDate', date.toISOString());
           formData.append('pairIndex', i);
-  
+
           await new Promise((resolve) => setTimeout(resolve, 200)); // Delay between requests
-  
-          await axios.post(
-            "https://artalyze-backend-staging.up.railway.app/api/admin/upload-image-pair", 
-            { ...formData, collection: "staging_imagePairs" }, // Explicitly set collection
-            { headers: { "Content-Type": "multipart/form-data" } }
-          );
-          
+
+          console.log("[DEBUG] Uploading Image Pair - FormData Content:");
+          for (let pair of formData.entries()) {
+            console.log(`${pair[0]}:`, pair[1]);
+          }
+
+          try {
+            const response = await axios.post(
+              "https://artalyze-backend-staging.up.railway.app/api/admin/upload-image-pair",
+              formData,
+              {
+                headers: {
+                  "Content-Type": "multipart/form-data", // ✅ Ensure correct format
+                },
+              }
+            );
+            console.log("[DEBUG] Upload Successful:", response.data);
+          } catch (error) {
+            console.error("[ERROR] Upload Failed:", error.response ? error.response.data : error.message);
+          }
+
+
         }
       }
-  
+
       setUploadMessage('All images uploaded successfully');
       fetchImagePairs(); // Refresh the image pairs
     } catch (error) {
@@ -103,7 +118,7 @@ const fetchImagePairs = useCallback(async () => {
       setUploadMessage('Failed to upload some or all images. Please try again.');
     }
   };
-  
+
 
   return (
     <div className="manage-day-container">
