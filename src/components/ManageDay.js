@@ -94,7 +94,7 @@ const ManageDay = () => {
 
           try {
             const response = await axios.post(
-              "https://api.cloudinary.com/v1_1/YOUR_CLOUD_NAME/image/upload",
+              `https://api.cloudinary.com/v1_1/${process.env.CLOUDINARY_CLOUD_NAME}/image/upload`,
               formData,
               {
                 headers: {
