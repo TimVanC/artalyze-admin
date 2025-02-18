@@ -13,7 +13,7 @@ const ManageDay = () => {
   const [imagePairs, setImagePairs] = useState([]); // State to store the fetched image pairs
   const [error, setError] = useState(null); // State for managing error messages
   const [uploadMessage, setUploadMessage] = useState(''); // State for managing upload messages
-  const cloudName = process.env.CLOUDINARY_CLOUD_NAME || "dehbheu8z";
+
 
   const fetchImagePairs = useCallback(async () => {
     try {
@@ -94,16 +94,11 @@ const ManageDay = () => {
 
           try {
             const response = await axios.post(
-              "https://api.cloudinary.com/v1_1/dehbheu8z/image/upload",
+              "https://artalyze-backend-staging.up.railway.app/api/admin/upload-image-pair",
               formData,
               {
                 headers: {
-                  "Content-Type": "multipart/form-data",
-                },
-                params: {
-                  folder: `artalyze/${type === 'human' ? 'humanImages' : 'aiImages'}`, // ✅ Store in correct subfolder
-                  format: "webp",  // ✅ Convert to WebP
-                  transformation: [{ width: 500, crop: "limit" }], // ✅ Max width 500px
+                  "Content-Type": "multipart/form-data", // ✅ Ensure correct format
                 },
               }
             );
