@@ -94,14 +94,22 @@ const ManageDay = () => {
 
           try {
             const response = await axios.post(
-              "https://artalyze-backend-staging.up.railway.app/api/admin/upload-image-pair",
+              "https://api.cloudinary.com/v1_1/YOUR_CLOUD_NAME/image/upload",
               formData,
               {
                 headers: {
-                  "Content-Type": "multipart/form-data", // ✅ Ensure correct format
+                  "Content-Type": "multipart/form-data",
+                },
+                params: {
+                  folder: "artalyze-images",
+                  format: "webp",  // ✅ Force WebP conversion
+                  transformation: [
+                    { width: 500, crop: "limit" },  // ✅ Limit max width to 500px
+                  ],
                 },
               }
             );
+
             console.log("[DEBUG] Upload Successful:", response.data);
           } catch (error) {
             console.error("[ERROR] Upload Failed:", error.response ? error.response.data : error.message);
