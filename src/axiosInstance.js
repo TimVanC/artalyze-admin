@@ -1,29 +1,32 @@
 import { STAGING_BASE_URL } from "./config";
 import axios from "axios";
 
-// Create an instance of Axios for the Admin console
+// Configure axios instance for admin API requests
 const axiosInstance = axios.create({
-  baseURL: STAGING_BASE_URL, // Using deployed staging backend
-  withCredentials: true, // Ensures cookies are sent if needed
+  baseURL: STAGING_BASE_URL,
+  withCredentials: true,
   headers: {
     "Content-Type": "application/json",
   },
 });
 
-// Debug Log: Log All Outgoing Requests
+// Add authentication token to all outgoing requests
 axiosInstance.interceptors.request.use((config) => {
-  console.log(`[Admin] Request made with URL: ${config.baseURL}${config.url}`);
+  const token = localStorage.getItem('adminToken');
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
   return config;
 });
 
-// Debug Log: Log API Responses
+// Handle authentication errors and redirect to login if needed
 axiosInstance.interceptors.response.use(
-  (response) => {
-    console.log(`[Admin] Response from ${response.config.url}:`, response.data);
-    return response;
-  },
+  (response) => response,
   (error) => {
-    console.error(`[Admin] API Error at ${error.config?.url}:`, error.response?.data || error.message);
+    if (error.response?.status === 401) {
+      localStorage.removeItem('adminToken');
+      window.location.href = '/login';
+    }
     return Promise.reject(error);
   }
 );
