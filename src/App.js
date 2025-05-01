@@ -5,6 +5,7 @@ import ManageDay from './components/ManageDay';
 import UserManagement from './pages/ManageUsers';
 import AdminOverview from './components/AdminOverview';
 
+// Protected route component that checks for admin authentication
 const ProtectedRoute = ({ children }) => {
   const token = localStorage.getItem('adminToken');
   return token ? children : <Navigate to="/login" />;
@@ -16,8 +17,11 @@ function App() {
   return (
     <Router>
       <Routes>
+        {/* Redirect to overview if logged in, otherwise to login page */}
         <Route path="/" element={isLoggedIn ? <Navigate to="/overview" /> : <Navigate to="/login" />} />
+        {/* Admin login page */}
         <Route path="/login" element={<Login />} />
+        {/* Protected routes requiring admin authentication */}
         <Route
           path="/overview"
           element={

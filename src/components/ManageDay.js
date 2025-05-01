@@ -8,43 +8,45 @@ import axios from 'axios';
 import axiosInstance from '../axiosInstance';
 import './ManageDay.css';
 
+// Component for managing image pairs for a specific date
 const ManageDay = () => {
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [imagePairs, setImagePairs] = useState([]); // State to store the fetched image pairs
   const [error, setError] = useState(null); // State for managing error messages
   const [uploadMessage, setUploadMessage] = useState(''); // State for managing upload messages
 
+  // Fetch image pairs for the selected date
+  const fetchImagePairs = useCallback(async () => {
+    try {
+      const adjustedDate = new Date(selectedDate);
+      adjustedDate.setUTCHours(5, 0, 0, 0); // Convert to EST/EDT format
+      const formattedDate = adjustedDate.toISOString().split("T")[0]; // Ensure only YYYY-MM-DD
 
-const fetchImagePairs = useCallback(async () => {
-  try {
-    const adjustedDate = new Date(selectedDate);
-    adjustedDate.setUTCHours(5, 0, 0, 0); // Convert to EST/EDT format
-    const formattedDate = adjustedDate.toISOString().split("T")[0]; // Ensure only YYYY-MM-DD
-
-    console.log('Fetching Image Pairs for:', formattedDate);
-    const response = await axiosInstance.get(`/admin/get-image-pairs-by-date/${formattedDate}`);
-    
-    if (response.data && response.data.pairs) {
-      setImagePairs(response.data.pairs);
-    } else {
+      console.log('Fetching Image Pairs for:', formattedDate);
+      const response = await axiosInstance.get(`/admin/get-image-pairs-by-date/${formattedDate}`);
+      
+      if (response.data && response.data.pairs) {
+        setImagePairs(response.data.pairs);
+      } else {
+        setImagePairs([]);
+      }
+    } catch (error) {
+      console.error('Error fetching image pairs:', error);
       setImagePairs([]);
     }
-  } catch (error) {
-    console.error('Error fetching image pairs:', error);
-    setImagePairs([]);
-  }
-}, [selectedDate]);
-
+  }, [selectedDate]);
 
   useEffect(() => {
     fetchImagePairs();
   }, [fetchImagePairs]); // Runs only when `fetchImagePairs` changes
 
+  // Handle date selection from calendar
   const handleDateClick = (date) => {
     setSelectedDate(date);
     setUploadMessage(''); // Clear any existing upload messages when a new date is selected
   };
 
+  // Handle file drops for both human and AI images
   const onDrop = (acceptedFiles, index, type) => {
     const updatedPairs = [...imagePairs];
     if (!updatedPairs[index]) {
@@ -65,6 +67,7 @@ const fetchImagePairs = useCallback(async () => {
     setImagePairs(updatedPairs);
   };
 
+  // Upload image pairs to the server
   const handleUpload = async () => {
     if (!selectedDate) {
       setUploadMessage('Please select a date first.');

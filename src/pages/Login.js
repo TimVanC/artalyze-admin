@@ -3,12 +3,14 @@ import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import axiosInstance from "../axiosInstance";
 
+// Admin login page component
 const Login = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
   const navigate = useNavigate();
 
+  // Handle login form submission
   const handleLogin = async (e) => {
     e.preventDefault();
     try {
@@ -18,7 +20,7 @@ const Login = () => {
     } catch (error) {
       setErrorMessage('Invalid login credentials');
     }
-};
+  };
 
   return (
     <div className="login-container">

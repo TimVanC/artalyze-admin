@@ -1,18 +1,21 @@
 import { BASE_URL } from "./config";
 import axios from "axios";
 
-// Create an instance of Axios for the Admin console
+// Configure Axios instance for admin API requests
 const axiosInstance = axios.create({
-  baseURL: BASE_URL, // Updated to use deployed backend
-  withCredentials: true, // Ensures cookies are sent if needed
+  baseURL: BASE_URL,
+  withCredentials: true,
   headers: {
     "Content-Type": "application/json",
   },
 });
 
-// Debug Log: Log All Outgoing Requests
+// Add authentication token to all requests
 axiosInstance.interceptors.request.use((config) => {
-  console.log(`[Admin] Request made with URL: ${config.baseURL}${config.url}`);
+  const token = localStorage.getItem('adminToken');
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
   return config;
 });
 
