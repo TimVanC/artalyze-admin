@@ -12,6 +12,7 @@ import './ManageDay.css';
 const ManageDay = () => {
   // Keep track of the selected date and image pairs
   const [selectedDate, setSelectedDate] = useState(new Date());
+  const [humanImages, setHumanImages] = useState(Array(5).fill(null));
   const [imagePairs, setImagePairs] = useState([]); // State to store the fetched image pairs
   const [error, setError] = useState(null); // State for managing error messages
   const [uploadMessage, setUploadMessage] = useState(''); // State for managing upload messages
@@ -50,24 +51,16 @@ const ManageDay = () => {
   };
 
   // Handle file drops in the dropzones
-  const onDrop = (acceptedFiles, index, type) => {
-    const updatedPairs = [...imagePairs];
-    if (!updatedPairs[index]) {
-      updatedPairs[index] = {}; // Ensure the pair object exists
-    }
-
+  const onDrop = (acceptedFiles, index) => {
     const file = acceptedFiles[0];
     if (!file.type.startsWith('image/')) {
       alert('Please upload a valid image file.');
       return;
     }
 
-    if (type === 'human') {
-      updatedPairs[index].human = file;
-    } else if (type === 'ai') {
-      updatedPairs[index].ai = file;
-    }
-    setImagePairs(updatedPairs);
+    const updatedImages = [...humanImages];
+    updatedImages[index] = file;
+    setHumanImages(updatedImages);
   };
 
   // Upload the image pairs to the server
@@ -77,65 +70,68 @@ const ManageDay = () => {
       return;
     }
 
+    const filledImages = humanImages.filter(img => img !== null);
+    if (filledImages.length === 0) {
+      setUploadMessage('Please upload at least one human image.');
+      return;
+    }
+
     try {
       // Adjust the date for daylight savings
       const date = new Date(selectedDate);
       const isDaylightSaving = date.getMonth() >= 2 && date.getMonth() <= 10;
       date.setUTCHours(isDaylightSaving ? 4 : 5, 0, 0, 0);
 
-      // Upload each pair one at a time
-      for (let i = 0; i < imagePairs.length; i++) {
-        const pair = imagePairs[i];
-        if (pair && pair.human && pair.ai) {
-          const formData = new FormData();
-          formData.append('humanImage', pair.human);
-          formData.append('aiImage', pair.ai);
-          formData.append('scheduledDate', date.toISOString());
-          formData.append('pairIndex', i);
+      // Upload each human image
+      for (let i = 0; i < humanImages.length; i++) {
+        const image = humanImages[i];
+        if (!image) continue;
 
-          // Small delay between uploads to prevent overwhelming the server
-          await new Promise((resolve) => setTimeout(resolve, 200));
+        const formData = new FormData();
+        formData.append('humanImage', image);
+        formData.append('scheduledDate', date.toISOString());
 
-          console.log("[DEBUG] Uploading Image Pair - FormData Content:");
-          for (let pair of formData.entries()) {
-            console.log(`${pair[0]}:`, pair[1]);
-          }
-
-          try {
-            const response = await axios.post(
-              "https://artalyze-backend-staging.up.railway.app/api/admin/upload-image-pair",
-              formData,
-              {
-                headers: {
-                  "Content-Type": "multipart/form-data", // ✅ Ensure correct format
-                },
-              }
-            );
-            console.log("[DEBUG] Upload Successful:", response.data);
-          } catch (error) {
-            console.error("[ERROR] Upload Failed:", error.response ? error.response.data : error.message);
-          }
+        try {
+          await axiosInstance.post('/admin/upload-human-image', formData, {
+            headers: {
+              'Content-Type': 'multipart/form-data'
+            }
+          });
+        } catch (error) {
+          console.error('Upload failed:', error);
+          setUploadMessage('Some uploads failed. Please try again.');
+          return;
         }
       }
 
-      setUploadMessage('All images uploaded successfully');
+      setUploadMessage('Human images uploaded successfully! AI pairs will be generated automatically.');
+      setHumanImages(Array(5).fill(null));
       fetchImagePairs(); // Refresh the image pairs
     } catch (error) {
       console.error('Upload error:', error);
-      setUploadMessage('Failed to upload some or all images. Please try again.');
+      setUploadMessage('Failed to upload images. Please try again.');
     }
   };
 
   return (
     <div className="manage-day-container">
-      <h1>Manage Day</h1>
+      <h1>Upload Human Images</h1>
+      <div className="info-box">
+        <p>Upload human artworks here. The system will automatically:</p>
+        <ul>
+          <li>Generate matching AI images using GPT-4 and Stable Diffusion</li>
+          <li>Create puzzle pairs for future dates</li>
+          <li>Move used images to an archive folder</li>
+        </ul>
+      </div>
+
       <div className="calendar-container">
         <Calendar onClickDay={handleDateClick} />
       </div>
+
       {selectedDate && (
         <>
-          <h2>Manage Image Pairs for {selectedDate.toDateString()}</h2>
-
+          <h2>Upload Images for {selectedDate.toDateString()}</h2>
           {error && <p className="error-message">{error}</p>}
 
           {/* Show existing image pairs for the selected date */}
@@ -148,18 +144,12 @@ const ManageDay = () => {
                   <h4>Pair #{index + 1}</h4>
                   <div className="existing-images">
                     <div className="image-wrapper">
-                      {pair.humanImageURL ? (
-                        <img src={pair.humanImageURL} alt="Human Art" className="image-preview" />
-                      ) : (
-                        <p>No Human Image</p>
-                      )}
+                      <img src={pair.humanImageURL} alt="Human Art" className="image-preview" />
+                      <p>Human</p>
                     </div>
                     <div className="image-wrapper">
-                      {pair.aiImageURL ? (
-                        <img src={pair.aiImageURL} alt="AI Art" className="image-preview" />
-                      ) : (
-                        <p>No AI Image</p>
-                      )}
+                      <img src={pair.aiImageURL} alt="AI Art" className="image-preview" />
+                      <p>AI</p>
                     </div>
                   </div>
                 </div>
@@ -167,29 +157,26 @@ const ManageDay = () => {
             </div>
           </div>
 
-          {/* Dropzones for uploading new image pairs */}
-          <div className="image-pairs-container">
+          {/* Upload dropzones */}
+          <div className="upload-section">
             {[...Array(5)].map((_, index) => (
-              <div key={index} className={`pair-container ${index < 4 ? 'half-width' : 'full-width'}`}>
-                <h3>Pair {index + 1}</h3>
-                <div className="dropzone-container">
-                  <DropzoneComponent
-                    onDrop={(files) => onDrop(files, index, 'human')}
-                    label="Drop Human Image"
-                    currentFile={imagePairs[index]?.human}
-                  />
-                  <DropzoneComponent
-                    onDrop={(files) => onDrop(files, index, 'ai')}
-                    label="Drop AI Image"
-                    currentFile={imagePairs[index]?.ai}
-                  />
-                </div>
+              <div key={index} className="upload-container">
+                <h3>Human Image {index + 1}</h3>
+                <DropzoneComponent
+                  onDrop={(files) => onDrop(files, index)}
+                  label="Drop Human Image Here"
+                  currentFile={humanImages[index]}
+                />
               </div>
             ))}
           </div>
 
-          <button className="upload-button" onClick={handleUpload}>
-            Upload Pairs
+          <button 
+            className="upload-button" 
+            onClick={handleUpload}
+            disabled={!humanImages.some(img => img !== null)}
+          >
+            Upload Human Images
           </button>
           {uploadMessage && <p className="upload-message">{uploadMessage}</p>}
         </>
