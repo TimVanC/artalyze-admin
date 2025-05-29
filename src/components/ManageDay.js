@@ -8,6 +8,7 @@ import axios from 'axios';
 import axiosInstance from '../axiosInstance';
 import './ManageDay.css';
 
+// Component for managing image pairs for a specific date
 const ManageDay = () => {
   // Keep track of the selected date and image pairs
   const [selectedDate, setSelectedDate] = useState(new Date());

@@ -13,6 +13,7 @@ const DropzoneComponent = ({ onDrop, label, currentFile }) => {
   return (
     <div {...getRootProps()} className="dropzone">
       <input {...getInputProps()} />
+      {/* Display current file name or upload prompt */}
       {currentFile ? (
         <p>{currentFile.name}</p>
       ) : (

@@ -9,6 +9,7 @@ const AdminOverview = () => {
   return (
     <div className="admin-overview">
       <h1>Admin Dashboard</h1>
+      {/* Navigation buttons for different admin sections */}
       <button onClick={() => navigate('/manage-day')}>Manage Images</button>
       <button onClick={() => navigate('/manage-users')}>Manage Users</button>
     </div>
