@@ -16,6 +16,7 @@ const ManageDay = () => {
   const [imagePairs, setImagePairs] = useState([]); // State to store the fetched image pairs
   const [error, setError] = useState(null); // State for managing error messages
   const [uploadMessage, setUploadMessage] = useState(''); // State for managing upload messages
+  const [response, setResponse] = useState(null); // State for managing the response from the server
 
   // Grab the image pairs for the selected date
   const fetchImagePairs = useCallback(async () => {
@@ -32,6 +33,10 @@ const ManageDay = () => {
         setImagePairs(response.data.pairs);
       } else {
         setImagePairs([]);
+      }
+
+      if (response.data && response.data.pendingHumanImages) {
+        setResponse(response.data);
       }
     } catch (error) {
       console.error('Error fetching image pairs:', error);
@@ -156,6 +161,22 @@ const ManageDay = () => {
               ))}
             </div>
           </div>
+
+          {/* Show pending human images */}
+          {response?.data?.pendingHumanImages?.length > 0 && (
+            <div className="pending-images-container">
+              <h3>Pending Human Images</h3>
+              <p className="info-text">These images are queued for AI pair generation</p>
+              <div className="pending-images-grid">
+                {response.data.pendingHumanImages.map((image, index) => (
+                  <div key={index} className="pending-image-wrapper">
+                    <img src={image.url} alt={`Pending Human Art ${index + 1}`} className="image-preview" />
+                    <p>Uploaded {new Date(image.uploadedAt).toLocaleTimeString()}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Upload dropzones */}
           <div className="upload-section">
