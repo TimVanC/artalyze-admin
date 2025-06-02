@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import DropzoneComponent from './DropzoneComponent';
 import axiosInstance from '../axiosInstance';
-import './Upload.css';
 import { v4 as uuidv4 } from 'uuid';
+import { STAGING_BASE_URL } from '../config';
+import './Upload.css';
 
 const Upload = () => {
   const [uploadedFiles, setUploadedFiles] = useState([]);
@@ -43,15 +44,27 @@ const Upload = () => {
         formData.append('scheduledDate', '');
 
         // Connect to SSE endpoint for progress updates
-        const eventSource = new EventSource(`/api/admin/progress-updates/${sessionId}`);
+        const token = localStorage.getItem('adminToken');
+        const eventSource = new EventSource(
+          `${STAGING_BASE_URL}/admin/progress-updates/${sessionId}`,
+          {
+            withCredentials: true,
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Accept': 'text/event-stream'
+            }
+          }
+        );
         
         eventSource.onmessage = (event) => {
           const { message } = JSON.parse(event.data);
           setUploadStatus(message);
         };
 
-        eventSource.onerror = () => {
+        eventSource.onerror = (error) => {
+          console.error('SSE Error:', error);
           eventSource.close();
+          setUploadStatus('Lost connection to server. Please try again.');
         };
 
         try {
