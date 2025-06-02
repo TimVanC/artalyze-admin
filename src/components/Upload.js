@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import DropzoneComponent from './DropzoneComponent';
 import axiosInstance from '../axiosInstance';
 import './Upload.css';
+import { v4 as uuidv4 } from 'uuid';
 
 const Upload = () => {
   const [uploadedFiles, setUploadedFiles] = useState([]);
@@ -33,17 +34,35 @@ const Upload = () => {
     try {
       // Upload each image
       for (const file of uploadedFiles) {
+        const sessionId = uuidv4(); // Generate unique sessionId for each upload
         const formData = new FormData();
         formData.append('humanImage', file);
+        formData.append('sessionId', sessionId);
         
         // Set the date to null/undefined to let the backend handle scheduling
         formData.append('scheduledDate', '');
 
-        await axiosInstance.post('/admin/upload-human-image', formData, {
-          headers: {
-            'Content-Type': 'multipart/form-data'
-          }
-        });
+        // Connect to SSE endpoint for progress updates
+        const eventSource = new EventSource(`/api/admin/progress-updates/${sessionId}`);
+        
+        eventSource.onmessage = (event) => {
+          const { message } = JSON.parse(event.data);
+          setUploadStatus(message);
+        };
+
+        eventSource.onerror = () => {
+          eventSource.close();
+        };
+
+        try {
+          await axiosInstance.post('/admin/upload-human-image', formData, {
+            headers: {
+              'Content-Type': 'multipart/form-data'
+            }
+          });
+        } finally {
+          eventSource.close();
+        }
       }
 
       setUploadStatus(`Successfully uploaded ${uploadedFiles.length} images! They will be automatically paired with AI images and scheduled.`);
