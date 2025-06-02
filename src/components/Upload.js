@@ -46,13 +46,9 @@ const Upload = () => {
         // Connect to SSE endpoint for progress updates
         const token = localStorage.getItem('adminToken');
         const eventSource = new EventSource(
-          `${STAGING_BASE_URL}/admin/progress-updates/${sessionId}`,
+          `${STAGING_BASE_URL}/admin/progress-updates/${sessionId}?token=${token}`,
           {
-            withCredentials: true,
-            headers: {
-              'Authorization': `Bearer ${token}`,
-              'Accept': 'text/event-stream'
-            }
+            withCredentials: true
           }
         );
         
