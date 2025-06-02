@@ -2,6 +2,7 @@ import React from 'react';
 import { BrowserRouter as Router, Route, Routes, Navigate } from 'react-router-dom';
 import Login from './pages/Login';
 import ManageDay from './components/ManageDay';
+import Upload from './components/Upload';
 import UserManagement from './pages/ManageUsers';
 import AdminOverview from './components/AdminOverview';
 
@@ -33,7 +34,17 @@ function App() {
           }
         />
         
-        {/* Manage daily puzzle image pairs */}
+        {/* Upload human images for automated pairing */}
+        <Route
+          path="/upload"
+          element={
+            <ProtectedRoute>
+              <Upload />
+            </ProtectedRoute>
+          }
+        />
+        
+        {/* Manage and view daily puzzle image pairs */}
         <Route
           path="/manage-day"
           element={

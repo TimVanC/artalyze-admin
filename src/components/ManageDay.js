@@ -1,206 +1,117 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { format } from 'date-fns';
-import { BASE_URL } from "../config";
 import Calendar from 'react-calendar';
-import 'react-calendar/dist/Calendar.css'; // Import calendar styles
-import DropzoneComponent from './DropzoneComponent';
-import axios from 'axios';
+import 'react-calendar/dist/Calendar.css';
 import axiosInstance from '../axiosInstance';
 import './ManageDay.css';
 
-// Component for managing image pairs for a specific date
 const ManageDay = () => {
-  // Keep track of the selected date and image pairs
   const [selectedDate, setSelectedDate] = useState(new Date());
-  const [humanImages, setHumanImages] = useState(Array(5).fill(null));
-  const [imagePairs, setImagePairs] = useState([]); // State to store the fetched image pairs
-  const [error, setError] = useState(null); // State for managing error messages
-  const [uploadMessage, setUploadMessage] = useState(''); // State for managing upload messages
-  const [response, setResponse] = useState(null); // State for managing the response from the server
+  const [imagePairs, setImagePairs] = useState([]);
+  const [pendingImages, setPendingImages] = useState([]);
+  const [error, setError] = useState(null);
+  const [message, setMessage] = useState('');
 
-  // Grab the image pairs for the selected date
+  // Fetch image pairs for the selected date
   const fetchImagePairs = useCallback(async () => {
     try {
-      // Adjust the date to EST/EDT timezone
       const adjustedDate = new Date(selectedDate);
       adjustedDate.setUTCHours(5, 0, 0, 0);
       const formattedDate = adjustedDate.toISOString().split("T")[0];
 
-      console.log('Fetching Image Pairs for:', formattedDate);
       const response = await axiosInstance.get(`/admin/get-image-pairs-by-date/${formattedDate}`);
 
-      if (response.data && response.data.pairs) {
-        setImagePairs(response.data.pairs);
+      if (response.data) {
+        setImagePairs(response.data.pairs || []);
+        setPendingImages(response.data.pendingHumanImages || []);
+        setMessage('');
       } else {
         setImagePairs([]);
-      }
-
-      if (response.data && response.data.pendingHumanImages) {
-        setResponse(response.data);
+        setPendingImages([]);
+        setMessage('No pairs scheduled for this date.');
       }
     } catch (error) {
       console.error('Error fetching image pairs:', error);
+      setError('Failed to fetch image pairs. Please try again.');
       setImagePairs([]);
+      setPendingImages([]);
     }
   }, [selectedDate]);
 
-  // Fetch image pairs whenever the selected date changes
   useEffect(() => {
     fetchImagePairs();
-  }, [fetchImagePairs]); // Runs only when `fetchImagePairs` changes
+  }, [fetchImagePairs]);
 
-  // Handle date selection from the calendar
   const handleDateClick = (date) => {
     setSelectedDate(date);
-    setUploadMessage(''); // Clear any existing upload messages when a new date is selected
-  };
-
-  // Handle file drops in the dropzones
-  const onDrop = (acceptedFiles, index) => {
-    const file = acceptedFiles[0];
-    if (!file.type.startsWith('image/')) {
-      alert('Please upload a valid image file.');
-      return;
-    }
-
-    const updatedImages = [...humanImages];
-    updatedImages[index] = file;
-    setHumanImages(updatedImages);
-  };
-
-  // Upload the image pairs to the server
-  const handleUpload = async () => {
-    if (!selectedDate) {
-      setUploadMessage('Please select a date first.');
-      return;
-    }
-
-    const filledImages = humanImages.filter(img => img !== null);
-    if (filledImages.length === 0) {
-      setUploadMessage('Please upload at least one human image.');
-      return;
-    }
-
-    try {
-      // Adjust the date for daylight savings
-      const date = new Date(selectedDate);
-      const isDaylightSaving = date.getMonth() >= 2 && date.getMonth() <= 10;
-      date.setUTCHours(isDaylightSaving ? 4 : 5, 0, 0, 0);
-
-      // Upload each human image
-      for (let i = 0; i < humanImages.length; i++) {
-        const image = humanImages[i];
-        if (!image) continue;
-
-        const formData = new FormData();
-        formData.append('humanImage', image);
-        formData.append('scheduledDate', date.toISOString());
-
-        try {
-          await axiosInstance.post('/admin/upload-human-image', formData, {
-            headers: {
-              'Content-Type': 'multipart/form-data'
-            }
-          });
-        } catch (error) {
-          console.error('Upload failed:', error);
-          setUploadMessage('Some uploads failed. Please try again.');
-          return;
-        }
-      }
-
-      setUploadMessage('Human images uploaded successfully! AI pairs will be generated automatically.');
-      setHumanImages(Array(5).fill(null));
-      fetchImagePairs(); // Refresh the image pairs
-    } catch (error) {
-      console.error('Upload error:', error);
-      setUploadMessage('Failed to upload images. Please try again.');
-    }
+    setMessage('');
   };
 
   return (
     <div className="manage-day-container">
-      <h1>Upload Human Images</h1>
+      <h1>Manage Daily Pairs</h1>
+      
       <div className="info-box">
-        <p>Upload human artworks here. The system will automatically:</p>
+        <p>View and manage automatically scheduled image pairs:</p>
         <ul>
-          <li>Generate matching AI images using GPT-4 and Stable Diffusion</li>
-          <li>Create puzzle pairs for future dates</li>
-          <li>Move used images to an archive folder</li>
+          <li>Select a date to view its scheduled pairs</li>
+          <li>Each day can have up to 5 pairs</li>
+          <li>Pending human images are waiting for AI pair generation</li>
+          <li>To add more images, use the Upload page</li>
         </ul>
       </div>
 
       <div className="calendar-container">
-        <Calendar onClickDay={handleDateClick} />
+        <Calendar onChange={handleDateClick} value={selectedDate} />
       </div>
 
-      {selectedDate && (
-        <>
-          <h2>Upload Images for {selectedDate.toDateString()}</h2>
-          {error && <p className="error-message">{error}</p>}
+      <div className="date-header">
+        <h2>Pairs for {selectedDate.toDateString()}</h2>
+      </div>
 
-          {/* Show existing image pairs for the selected date */}
-          <div className="existing-image-pairs-container">
-            <h3>Existing Image Pairs for {selectedDate.toDateString()}</h3>
-            {imagePairs.length === 0 && <p>No existing image pairs found for this date.</p>}
-            <div className="existing-pairs-wrapper">
-              {imagePairs.map((pair, index) => (
-                <div key={index} className="existing-pair-container">
-                  <h4>Pair #{index + 1}</h4>
-                  <div className="existing-images">
-                    <div className="image-wrapper">
-                      <img src={pair.humanImageURL} alt="Human Art" className="image-preview" />
-                      <p>Human</p>
-                    </div>
-                    <div className="image-wrapper">
-                      <img src={pair.aiImageURL} alt="AI Art" className="image-preview" />
-                      <p>AI</p>
-                    </div>
+      {error && <div className="error-message">{error}</div>}
+      {message && <div className="info-message">{message}</div>}
+
+      {/* Display completed pairs */}
+      <div className="existing-image-pairs-container">
+        <h3>Completed Pairs</h3>
+        {imagePairs.length === 0 ? (
+          <p className="no-pairs-message">No completed pairs for this date.</p>
+        ) : (
+          <div className="existing-pairs-wrapper">
+            {imagePairs.map((pair, index) => (
+              <div key={index} className="existing-pair-container">
+                <h4>Pair #{index + 1}</h4>
+                <div className="existing-images">
+                  <div className="image-wrapper">
+                    <img src={pair.humanImageURL} alt="Human Art" className="image-preview" />
+                    <p>Human</p>
+                  </div>
+                  <div className="image-wrapper">
+                    <img src={pair.aiImageURL} alt="AI Art" className="image-preview" />
+                    <p>AI</p>
                   </div>
                 </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Show pending human images */}
-          {response?.data?.pendingHumanImages?.length > 0 && (
-            <div className="pending-images-container">
-              <h3>Pending Human Images</h3>
-              <p className="info-text">These images are queued for AI pair generation</p>
-              <div className="pending-images-grid">
-                {response.data.pendingHumanImages.map((image, index) => (
-                  <div key={index} className="pending-image-wrapper">
-                    <img src={image.url} alt={`Pending Human Art ${index + 1}`} className="image-preview" />
-                    <p>Uploaded {new Date(image.uploadedAt).toLocaleTimeString()}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Upload dropzones */}
-          <div className="upload-section">
-            {[...Array(5)].map((_, index) => (
-              <div key={index} className="upload-container">
-                <h3>Human Image {index + 1}</h3>
-                <DropzoneComponent
-                  onDrop={(files) => onDrop(files, index)}
-                  label="Drop Human Image Here"
-                  currentFile={humanImages[index]}
-                />
               </div>
             ))}
           </div>
+        )}
+      </div>
 
-          <button 
-            className="upload-button" 
-            onClick={handleUpload}
-            disabled={!humanImages.some(img => img !== null)}
-          >
-            Upload Human Images
-          </button>
-          {uploadMessage && <p className="upload-message">{uploadMessage}</p>}
-        </>
+      {/* Display pending human images */}
+      {pendingImages.length > 0 && (
+        <div className="pending-images-container">
+          <h3>Pending Human Images</h3>
+          <p className="info-text">These images are queued for AI pair generation</p>
+          <div className="pending-images-grid">
+            {pendingImages.map((image, index) => (
+              <div key={index} className="pending-image-wrapper">
+                <img src={image.url} alt={`Pending Human Art ${index + 1}`} className="image-preview" />
+                <p>Uploaded {new Date(image.uploadedAt).toLocaleTimeString()}</p>
+              </div>
+            ))}
+          </div>
+        </div>
       )}
     </div>
   );
