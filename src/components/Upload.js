@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import DropzoneComponent from './DropzoneComponent';
 import axiosInstance from '../axiosInstance';
 import { v4 as uuidv4 } from 'uuid';
@@ -9,6 +9,20 @@ const Upload = () => {
   const [uploadedFiles, setUploadedFiles] = useState([]);
   const [uploadStatus, setUploadStatus] = useState('');
   const [isUploading, setIsUploading] = useState(false);
+  const eventSourceRef = useRef(null);
+
+  // Cleanup function for SSE connection
+  const cleanupSSE = () => {
+    if (eventSourceRef.current) {
+      eventSourceRef.current.close();
+      eventSourceRef.current = null;
+    }
+  };
+
+  // Cleanup on component unmount
+  useEffect(() => {
+    return () => cleanupSSE();
+  }, []);
 
   const onDrop = (acceptedFiles) => {
     // Filter out any non-image files
@@ -23,6 +37,47 @@ const Upload = () => {
     setUploadedFiles(prev => prev.filter((_, i) => i !== index));
   };
 
+  const setupSSE = (sessionId) => {
+    // Clean up any existing connection
+    cleanupSSE();
+
+    const token = localStorage.getItem('adminToken');
+    const eventSource = new EventSource(
+      `${STAGING_BASE_URL}/admin/progress-updates/${sessionId}?token=${token}`,
+      { withCredentials: true }
+    );
+
+    eventSource.onopen = () => {
+      console.log('SSE connection opened');
+    };
+
+    eventSource.onmessage = (event) => {
+      try {
+        const { message, type } = JSON.parse(event.data);
+        console.log('SSE message received:', { message, type });
+        setUploadStatus(message);
+        // Update status message styling based on type
+        const statusElement = document.querySelector('.status-message');
+        if (statusElement) {
+          statusElement.className = `status-message ${type || 'info'}`;
+        }
+      } catch (error) {
+        console.error('Error parsing SSE message:', error);
+      }
+    };
+
+    eventSource.onerror = (error) => {
+      console.error('SSE connection error:', error);
+      // Only show error if we're still uploading
+      if (isUploading) {
+        setUploadStatus('Connection interrupted. Upload may still be processing...');
+      }
+    };
+
+    eventSourceRef.current = eventSource;
+    return eventSource;
+  };
+
   const handleUpload = async () => {
     if (uploadedFiles.length === 0) {
       setUploadStatus('Please add some images first.');
@@ -30,60 +85,36 @@ const Upload = () => {
     }
 
     setIsUploading(true);
-    setUploadStatus('Uploading images...');
+    setUploadStatus('Starting upload process...');
 
     try {
       // Upload each image
       for (const file of uploadedFiles) {
-        const sessionId = uuidv4(); // Generate unique sessionId for each upload
+        const sessionId = uuidv4();
         const formData = new FormData();
         formData.append('humanImage', file);
         formData.append('sessionId', sessionId);
-        
-        // Set the date to null/undefined to let the backend handle scheduling
         formData.append('scheduledDate', '');
 
-        // Connect to SSE endpoint for progress updates
-        const token = localStorage.getItem('adminToken');
-        const eventSource = new EventSource(
-          `${STAGING_BASE_URL}/admin/progress-updates/${sessionId}?token=${token}`,
-          {
-            withCredentials: true
-          }
-        );
-        
-        eventSource.onmessage = (event) => {
-          try {
-            const { message, type } = JSON.parse(event.data);
-            setUploadStatus(message);
-            // Update status message styling based on type
-            const statusElement = document.querySelector('.status-message');
-            if (statusElement) {
-              statusElement.className = `status-message ${type}`;
-            }
-          } catch (error) {
-            console.error('Error parsing SSE message:', error);
-          }
-        };
-
-        eventSource.onerror = (error) => {
-          // Only show error if we're still uploading and it's not a normal connection close
-          if (isUploading && eventSource.readyState === EventSource.CLOSED) {
-            console.error('SSE Error:', error);
-            // Don't show the error message since the upload might still be working
-          }
-          // Don't close the connection on error - let the server handle it
-          // The server will close it after successful upload or final error
-        };
+        // Set up SSE connection for this upload
+        setupSSE(sessionId);
 
         try {
-          await axiosInstance.post('/admin/upload-human-image', formData, {
+          const response = await axiosInstance.post('/admin/upload-human-image', formData, {
             headers: {
               'Content-Type': 'multipart/form-data'
             }
           });
-          // Add success message for this specific file
-          setUploadStatus(`Successfully uploaded ${file.name}`);
+
+          // Wait a bit before closing the connection to ensure we get all messages
+          setTimeout(() => {
+            if (eventSourceRef.current) {
+              eventSourceRef.current.close();
+              eventSourceRef.current = null;
+            }
+          }, 2000);
+
+          console.log('Upload response:', response.data);
         } catch (error) {
           console.error('Upload error:', error);
           setUploadStatus(`Failed to upload ${file.name}. Continuing with remaining files...`);
@@ -97,6 +128,8 @@ const Upload = () => {
       setUploadStatus('Failed to upload images. Please try again.');
     } finally {
       setIsUploading(false);
+      // Final cleanup
+      setTimeout(cleanupSSE, 2000);
     }
   };
 
@@ -155,7 +188,7 @@ const Upload = () => {
       </button>
 
       {uploadStatus && (
-        <div className={`status-message ${uploadStatus.includes('Success') ? 'success' : uploadStatus.includes('Error') ? 'error' : 'info'}`}>
+        <div className={`status-message ${uploadStatus.includes('Success') ? 'success' : uploadStatus.includes('Error') || uploadStatus.includes('Failed') ? 'error' : 'info'}`}>
           {uploadStatus}
         </div>
       )}
