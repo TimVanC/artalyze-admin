@@ -50,11 +50,11 @@ const Upload = () => {
 
     try {
       const url = new URL(`${STAGING_BASE_URL}/admin/progress-updates/${sessionId}`);
-      url.searchParams.append('auth', token); // Send token without Bearer prefix
+      url.searchParams.append('token', token); // Send raw token
       
       console.log('Establishing SSE connection:', url.toString());
       
-      const eventSource = new EventSource(url.toString());  // Remove withCredentials
+      const eventSource = new EventSource(url.toString());
 
       // Connection opened
       eventSource.onopen = (event) => {
