@@ -42,123 +42,93 @@ const Upload = () => {
     cleanupSSE();
 
     const token = localStorage.getItem('adminToken');
-    const url = new URL(`${STAGING_BASE_URL}/admin/progress-updates/${sessionId}`);
-    
-    // Create EventSource with Authorization header in URL
-    const eventSourceUrl = new URL(url);
-    eventSourceUrl.searchParams.append('auth', `Bearer ${token}`);
-    
-    const eventSource = new EventSource(eventSourceUrl, {
-      withCredentials: true
-    });
-
-    eventSource.onopen = () => {
-      console.log('SSE connection opened');
-    };
-
-    eventSource.onmessage = (event) => {
-      try {
-        const { message, type } = JSON.parse(event.data);
-        console.log('SSE message received:', { message, type });
-        setUploadStatus(message);
-        // Update status message styling based on type
-        const statusElement = document.querySelector('.status-message');
-        if (statusElement) {
-          statusElement.className = `status-message ${type || 'info'}`;
-        }
-      } catch (error) {
-        console.error('Error parsing SSE message:', error);
-      }
-    };
-
-    eventSource.onerror = (error) => {
-      console.error('SSE connection error:', error);
-      // Only show error if we're still uploading
-      if (isUploading) {
-        console.log('Upload still in progress, continuing...');
-      }
-    };
-
-    eventSourceRef.current = eventSource;
-    return eventSource;
-  };
-
-  // Custom EventSource class that supports headers
-  class EventSourceWithAuth {
-    constructor(url, options = {}) {
-      this.url = url;
-      this.options = options;
-      this.eventSource = null;
-      this.listeners = {
-        open: [],
-        message: [],
-        error: []
-      };
-      this.connect();
+    if (!token) {
+      console.error('No admin token found');
+      setUploadStatus('Authentication error. Please log in again.');
+      return null;
     }
 
-    connect() {
-      // Create fetch request with headers
-      fetch(this.url, {
-        method: 'GET',
-        headers: this.options.headers,
-        credentials: this.options.withCredentials ? 'include' : 'same-origin'
-      }).then(response => {
-        if (response.ok) {
-          // If auth successful, create regular EventSource
-          this.eventSource = new EventSource(this.url, {
-            withCredentials: this.options.withCredentials
-          });
-
-          // Forward all events
-          this.eventSource.onopen = (e) => this.listeners.open.forEach(fn => fn(e));
-          this.eventSource.onmessage = (e) => this.listeners.message.forEach(fn => fn(e));
-          this.eventSource.onerror = (e) => this.listeners.error.forEach(fn => fn(e));
-        } else {
-          throw new Error(`Auth failed: ${response.status}`);
-        }
-      }).catch(error => {
-        console.error('EventSource auth error:', error);
-        this.listeners.error.forEach(fn => fn(new Event('error')));
+    try {
+      const url = new URL(`${STAGING_BASE_URL}/admin/progress-updates/${sessionId}`);
+      url.searchParams.append('auth', token); // Send token without Bearer prefix
+      
+      console.log('Establishing SSE connection:', url.toString());
+      
+      const eventSource = new EventSource(url.toString(), {
+        withCredentials: true
       });
-    }
 
-    addEventListener(type, callback) {
-      if (this.listeners[type]) {
-        this.listeners[type].push(callback);
-      }
-    }
-
-    removeEventListener(type, callback) {
-      if (this.listeners[type]) {
-        this.listeners[type] = this.listeners[type].filter(fn => fn !== callback);
-      }
-    }
-
-    set onopen(fn) {
-      this.listeners.open = [fn];
-    }
-
-    set onmessage(fn) {
-      this.listeners.message = [fn];
-    }
-
-    set onerror(fn) {
-      this.listeners.error = [fn];
-    }
-
-    close() {
-      if (this.eventSource) {
-        this.eventSource.close();
-      }
-      this.eventSource = null;
-      this.listeners = {
-        open: [],
-        message: [],
-        error: []
+      // Connection opened
+      eventSource.onopen = (event) => {
+        console.log('SSE connection opened successfully');
       };
+
+      // Message received
+      eventSource.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          console.log('SSE message received:', data);
+
+          // Ignore heartbeat messages
+          if (data.type === 'heartbeat') {
+            console.log('Heartbeat received');
+            return;
+          }
+
+          // Update status message
+          setUploadStatus(data.message);
+          
+          // Update status message styling
+          const statusElement = document.querySelector('.status-message');
+          if (statusElement) {
+            statusElement.className = `status-message ${data.type || 'info'}`;
+            
+            // Scroll success messages into view
+            if (data.type === 'success') {
+              statusElement.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            }
+          }
+        } catch (error) {
+          console.error('Error parsing SSE message:', error);
+        }
+      };
+
+      // Error handling
+      eventSource.onerror = (error) => {
+        console.error('SSE connection error:', error);
+        
+        if (eventSource.readyState === EventSource.CLOSED) {
+          console.log('SSE connection closed');
+          return;
+        }
+
+        // Only show error and attempt reconnect if we're still uploading
+        if (isUploading) {
+          setUploadStatus('Connection error. Retrying...');
+          
+          // Close the errored connection
+          eventSource.close();
+          
+          // Attempt to reconnect after a delay
+          setTimeout(() => {
+            if (isUploading) {
+              console.log('Attempting to reconnect...');
+              setupSSE(sessionId);
+            }
+          }, 3000);
+        }
+      };
+
+      // Store the EventSource instance
+      eventSourceRef.current = eventSource;
+      return eventSource;
+
+    } catch (error) {
+      console.error('Error setting up SSE:', error);
+      setUploadStatus('Failed to establish connection. Please try again.');
+      return null;
     }
-  }
+  };
 
   const handleUpload = async () => {
     if (uploadedFiles.length === 0) {
@@ -171,7 +141,8 @@ const Upload = () => {
 
     try {
       // Upload each image
-      for (const file of uploadedFiles) {
+      for (let i = 0; i < uploadedFiles.length; i++) {
+        const file = uploadedFiles[i];
         const sessionId = uuidv4();
         const formData = new FormData();
         formData.append('humanImage', file);
@@ -179,18 +150,23 @@ const Upload = () => {
         formData.append('scheduledDate', '');
 
         // Set up SSE connection for this upload
-        setupSSE(sessionId);
+        const eventSource = setupSSE(sessionId);
+        if (!eventSource) {
+          throw new Error('Failed to establish SSE connection');
+        }
 
         try {
+          setUploadStatus(`Processing image ${i + 1} of ${uploadedFiles.length}...`);
           const response = await axiosInstance.post('/admin/upload-human-image', formData, {
             headers: {
               'Content-Type': 'multipart/form-data'
             }
           });
 
-          // Wait a bit before closing the connection to ensure we get all messages
+          // Wait a bit before closing the connection
           setTimeout(() => {
             if (eventSourceRef.current) {
+              console.log('Closing SSE connection');
               eventSourceRef.current.close();
               eventSourceRef.current = null;
             }
@@ -203,7 +179,7 @@ const Upload = () => {
         }
       }
 
-      setUploadStatus(`Successfully uploaded ${uploadedFiles.length} images! They will be automatically paired with AI images and scheduled.`);
+      setUploadStatus(`✨ Successfully uploaded ${uploadedFiles.length} images! They will be automatically paired with AI images and scheduled.`);
       setUploadedFiles([]);
     } catch (error) {
       console.error('Upload error:', error);
@@ -223,10 +199,12 @@ const Upload = () => {
         <h2>How it works:</h2>
         <ul>
           <li>Upload multiple human artwork images at once</li>
-          <li>The system will automatically generate matching AI images</li>
-          <li>Image pairs will be scheduled for the next available days</li>
-          <li>Each day can have up to 5 pairs</li>
-          <li>You can preview the scheduled pairs in the Manage Day screen</li>
+          <li>Each image goes through 5 steps of processing:</li>
+          <li>1. Image optimization</li>
+          <li>2. Cloud storage upload</li>
+          <li>3. Style analysis</li>
+          <li>4. AI prompt engineering</li>
+          <li>5. AI image generation (30-45 seconds)</li>
         </ul>
       </div>
 
