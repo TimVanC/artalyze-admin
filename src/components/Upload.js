@@ -54,9 +54,7 @@ const Upload = () => {
       
       console.log('Establishing SSE connection:', url.toString());
       
-      const eventSource = new EventSource(url.toString(), {
-        withCredentials: true
-      });
+      const eventSource = new EventSource(url.toString());  // Remove withCredentials
 
       // Connection opened
       eventSource.onopen = (event) => {
@@ -148,6 +146,8 @@ const Upload = () => {
         formData.append('humanImage', file);
         formData.append('sessionId', sessionId);
         formData.append('scheduledDate', '');
+        formData.append('totalImages', uploadedFiles.length.toString());
+        formData.append('currentImageIndex', (i + 1).toString());
 
         // Set up SSE connection for this upload
         const eventSource = setupSSE(sessionId);
