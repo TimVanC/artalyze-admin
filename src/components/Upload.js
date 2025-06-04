@@ -42,10 +42,15 @@ const Upload = () => {
     cleanupSSE();
 
     const token = localStorage.getItem('adminToken');
-    const eventSource = new EventSource(
-      `${STAGING_BASE_URL}/admin/progress-updates/${sessionId}?token=${token}`,
-      { withCredentials: true }
-    );
+    const url = new URL(`${STAGING_BASE_URL}/admin/progress-updates/${sessionId}`);
+    
+    // Create EventSource with Authorization header
+    const eventSource = new EventSourceWithAuth(url, {
+      headers: {
+        'Authorization': `Bearer ${token}`
+      },
+      withCredentials: true
+    });
 
     eventSource.onopen = () => {
       console.log('SSE connection opened');
@@ -77,6 +82,83 @@ const Upload = () => {
     eventSourceRef.current = eventSource;
     return eventSource;
   };
+
+  // Custom EventSource class that supports headers
+  class EventSourceWithAuth {
+    constructor(url, options = {}) {
+      this.url = url;
+      this.options = options;
+      this.eventSource = null;
+      this.listeners = {
+        open: [],
+        message: [],
+        error: []
+      };
+      this.connect();
+    }
+
+    connect() {
+      // Create fetch request with headers
+      fetch(this.url, {
+        method: 'GET',
+        headers: this.options.headers,
+        credentials: this.options.withCredentials ? 'include' : 'same-origin'
+      }).then(response => {
+        if (response.ok) {
+          // If auth successful, create regular EventSource
+          this.eventSource = new EventSource(this.url, {
+            withCredentials: this.options.withCredentials
+          });
+
+          // Forward all events
+          this.eventSource.onopen = (e) => this.listeners.open.forEach(fn => fn(e));
+          this.eventSource.onmessage = (e) => this.listeners.message.forEach(fn => fn(e));
+          this.eventSource.onerror = (e) => this.listeners.error.forEach(fn => fn(e));
+        } else {
+          throw new Error(`Auth failed: ${response.status}`);
+        }
+      }).catch(error => {
+        console.error('EventSource auth error:', error);
+        this.listeners.error.forEach(fn => fn(new Event('error')));
+      });
+    }
+
+    addEventListener(type, callback) {
+      if (this.listeners[type]) {
+        this.listeners[type].push(callback);
+      }
+    }
+
+    removeEventListener(type, callback) {
+      if (this.listeners[type]) {
+        this.listeners[type] = this.listeners[type].filter(fn => fn !== callback);
+      }
+    }
+
+    set onopen(fn) {
+      this.listeners.open = [fn];
+    }
+
+    set onmessage(fn) {
+      this.listeners.message = [fn];
+    }
+
+    set onerror(fn) {
+      this.listeners.error = [fn];
+    }
+
+    close() {
+      if (this.eventSource) {
+        this.eventSource.close();
+      }
+      this.eventSource = null;
+      this.listeners = {
+        open: [],
+        message: [],
+        error: []
+      };
+    }
+  }
 
   const handleUpload = async () => {
     if (uploadedFiles.length === 0) {
