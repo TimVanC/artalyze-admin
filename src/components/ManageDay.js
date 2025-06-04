@@ -59,9 +59,13 @@ const ManageDay = () => {
       setIsLoading(true);
       setError(null);
       
+      const adjustedDate = new Date(selectedDate);
+      adjustedDate.setUTCHours(5, 0, 0, 0);
+      const formattedDate = adjustedDate.toISOString().split("T")[0];
+      
       const response = await axiosInstance.post('/admin/regenerate-ai-image', {
         pairId,
-        scheduledDate: selectedDate.toISOString()
+        scheduledDate: formattedDate
       });
 
       // Update the image pairs with the new AI image
@@ -91,10 +95,14 @@ const ManageDay = () => {
       setIsLoading(true);
       setError(null);
 
+      const adjustedDate = new Date(selectedDate);
+      adjustedDate.setUTCHours(5, 0, 0, 0);
+      const formattedDate = adjustedDate.toISOString().split("T")[0];
+
       await axiosInstance.delete('/admin/delete-pair', {
         data: {
           pairId,
-          scheduledDate: selectedDate.toISOString()
+          scheduledDate: formattedDate
         }
       });
 
