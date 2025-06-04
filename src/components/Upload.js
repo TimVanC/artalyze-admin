@@ -53,8 +53,17 @@ const Upload = () => {
         );
         
         eventSource.onmessage = (event) => {
-          const { message } = JSON.parse(event.data);
-          setUploadStatus(message);
+          try {
+            const { message, type } = JSON.parse(event.data);
+            setUploadStatus(message);
+            // Update status message styling based on type
+            const statusElement = document.querySelector('.status-message');
+            if (statusElement) {
+              statusElement.className = `status-message ${type}`;
+            }
+          } catch (error) {
+            console.error('Error parsing SSE message:', error);
+          }
         };
 
         eventSource.onerror = (error) => {
@@ -63,7 +72,8 @@ const Upload = () => {
             console.error('SSE Error:', error);
             // Don't show the error message since the upload might still be working
           }
-          eventSource.close();
+          // Don't close the connection on error - let the server handle it
+          // The server will close it after successful upload or final error
         };
 
         try {
@@ -77,8 +87,6 @@ const Upload = () => {
         } catch (error) {
           console.error('Upload error:', error);
           setUploadStatus(`Failed to upload ${file.name}. Continuing with remaining files...`);
-        } finally {
-          eventSource.close();
         }
       }
 
@@ -147,7 +155,7 @@ const Upload = () => {
       </button>
 
       {uploadStatus && (
-        <div className={`status-message ${uploadStatus.includes('Success') ? 'success' : 'error'}`}>
+        <div className={`status-message ${uploadStatus.includes('Success') ? 'success' : uploadStatus.includes('Error') ? 'error' : 'info'}`}>
           {uploadStatus}
         </div>
       )}
