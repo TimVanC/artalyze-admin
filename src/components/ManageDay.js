@@ -3,6 +3,7 @@ import { format } from 'date-fns';
 import Calendar from 'react-calendar';
 import 'react-calendar/dist/Calendar.css';
 import axiosInstance from '../axiosInstance';
+import ImageModal from './ImageModal';
 import './ManageDay.css';
 
 const ManageDay = () => {
@@ -11,6 +12,8 @@ const ManageDay = () => {
   const [pendingImages, setPendingImages] = useState([]);
   const [error, setError] = useState(null);
   const [message, setMessage] = useState('');
+  const [selectedImage, setSelectedImage] = useState(null);
+  const [isLoading, setIsLoading] = useState(false);
 
   // Fetch image pairs for the selected date
   const fetchImagePairs = useCallback(async () => {
@@ -47,6 +50,65 @@ const ManageDay = () => {
     setMessage('');
   };
 
+  const handleImageClick = (imageUrl) => {
+    setSelectedImage(imageUrl);
+  };
+
+  const handleRegenerateAI = async (pairId) => {
+    try {
+      setIsLoading(true);
+      setError(null);
+      
+      const response = await axiosInstance.post('/admin/regenerate-ai-image', {
+        pairId,
+        scheduledDate: selectedDate.toISOString()
+      });
+
+      // Update the image pairs with the new AI image
+      setImagePairs(prevPairs => 
+        prevPairs.map(pair => 
+          pair._id === pairId 
+            ? { ...pair, aiImageURL: response.data.newAiImageUrl }
+            : pair
+        )
+      );
+
+      setMessage('AI image regenerated successfully!');
+    } catch (error) {
+      console.error('Error regenerating AI image:', error);
+      setError(error.response?.data?.error || 'Failed to regenerate AI image');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleDeletePair = async (pairId) => {
+    if (!window.confirm('Are you sure you want to delete this pair? This action cannot be undone.')) {
+      return;
+    }
+
+    try {
+      setIsLoading(true);
+      setError(null);
+
+      await axiosInstance.delete('/admin/delete-pair', {
+        data: {
+          pairId,
+          scheduledDate: selectedDate.toISOString()
+        }
+      });
+
+      // Remove the deleted pair from the state
+      setImagePairs(prevPairs => prevPairs.filter(pair => pair._id !== pairId));
+      setMessage('Image pair deleted successfully!');
+    } catch (error) {
+      console.error('Error deleting pair:', error);
+      setError(error.response?.data?.error || 'Failed to delete image pair');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return (
     <div className="manage-day-container">
       <h1>Manage Daily Pairs</h1>
@@ -55,9 +117,9 @@ const ManageDay = () => {
         <p>View and manage automatically scheduled image pairs:</p>
         <ul>
           <li>Select a date to view its scheduled pairs</li>
-          <li>Each day can have up to 5 pairs</li>
-          <li>Pending human images are waiting for AI pair generation</li>
-          <li>To add more images, use the Upload page</li>
+          <li>Click on any image to enlarge it</li>
+          <li>Use the regenerate button to create a new AI variation</li>
+          <li>Use the delete button to remove a pair completely</li>
         </ul>
       </div>
 
@@ -80,17 +142,44 @@ const ManageDay = () => {
         ) : (
           <div className="existing-pairs-wrapper">
             {imagePairs.map((pair, index) => (
-              <div key={index} className="existing-pair-container">
+              <div key={pair._id || index} className="existing-pair-container">
                 <h4>Pair #{index + 1}</h4>
                 <div className="existing-images">
                   <div className="image-wrapper">
-                    <img src={pair.humanImageURL} alt="Human Art" className="image-preview" />
+                    <img 
+                      src={pair.humanImageURL} 
+                      alt="Human Art" 
+                      className="image-preview"
+                      onClick={() => handleImageClick(pair.humanImageURL)}
+                    />
                     <p>Human</p>
                   </div>
                   <div className="image-wrapper">
-                    <img src={pair.aiImageURL} alt="AI Art" className="image-preview" />
+                    <img 
+                      src={pair.aiImageURL} 
+                      alt="AI Art" 
+                      className="image-preview"
+                      onClick={() => handleImageClick(pair.aiImageURL)}
+                    />
                     <p>AI</p>
                   </div>
+                </div>
+                <div className="pair-actions">
+                  <button 
+                    className="regenerate-button"
+                    onClick={() => handleRegenerateAI(pair._id)}
+                    disabled={isLoading}
+                  >
+                    <span className="regenerate-icon">↻</span>
+                    Regenerate AI
+                  </button>
+                  <button 
+                    className="delete-button"
+                    onClick={() => handleDeletePair(pair._id)}
+                    disabled={isLoading}
+                  >
+                    Delete Pair
+                  </button>
                 </div>
               </div>
             ))}
@@ -99,19 +188,29 @@ const ManageDay = () => {
       </div>
 
       {/* Display pending human images */}
-      {pendingImages.length > 0 && (
-        <div className="pending-images-container">
-          <h3>Pending Human Images</h3>
-          <p className="info-text">These images are queued for AI pair generation</p>
-          <div className="pending-images-grid">
-            {pendingImages.map((image, index) => (
-              <div key={index} className="pending-image-wrapper">
-                <img src={image.url} alt={`Pending Human Art ${index + 1}`} className="image-preview" />
-                <p>Uploaded {new Date(image.uploadedAt).toLocaleTimeString()}</p>
-              </div>
-            ))}
-          </div>
+      <div className="pending-images-container">
+        <h3>Pending Human Images</h3>
+        <p className="info-text">These images are queued for AI pair generation</p>
+        <div className="pending-images-grid">
+          {pendingImages.map((image, index) => (
+            <div key={index} className="pending-image-wrapper">
+              <img 
+                src={image.url} 
+                alt={`Pending Human Art ${index + 1}`} 
+                className="image-preview"
+                onClick={() => handleImageClick(image.url)}
+              />
+              <p>Uploaded {new Date(image.uploadedAt).toLocaleTimeString()}</p>
+            </div>
+          ))}
         </div>
+      </div>
+
+      {selectedImage && (
+        <ImageModal
+          imageUrl={selectedImage}
+          onClose={() => setSelectedImage(null)}
+        />
       )}
     </div>
   );
