@@ -44,11 +44,11 @@ const Upload = () => {
     const token = localStorage.getItem('adminToken');
     const url = new URL(`${STAGING_BASE_URL}/admin/progress-updates/${sessionId}`);
     
-    // Create EventSource with Authorization header
-    const eventSource = new EventSourceWithAuth(url, {
-      headers: {
-        'Authorization': `Bearer ${token}`
-      },
+    // Create EventSource with Authorization header in URL
+    const eventSourceUrl = new URL(url);
+    eventSourceUrl.searchParams.append('auth', `Bearer ${token}`);
+    
+    const eventSource = new EventSource(eventSourceUrl, {
       withCredentials: true
     });
 
@@ -75,7 +75,7 @@ const Upload = () => {
       console.error('SSE connection error:', error);
       // Only show error if we're still uploading
       if (isUploading) {
-        setUploadStatus('Connection interrupted. Upload may still be processing...');
+        console.log('Upload still in progress, continuing...');
       }
     };
 
