@@ -58,9 +58,12 @@ const Upload = () => {
         };
 
         eventSource.onerror = (error) => {
-          console.error('SSE Error:', error);
+          // Only show error if we're still uploading and it's not a normal connection close
+          if (isUploading && eventSource.readyState === EventSource.CLOSED) {
+            console.error('SSE Error:', error);
+            // Don't show the error message since the upload might still be working
+          }
           eventSource.close();
-          setUploadStatus('Lost connection to server. Please try again.');
         };
 
         try {
@@ -69,6 +72,11 @@ const Upload = () => {
               'Content-Type': 'multipart/form-data'
             }
           });
+          // Add success message for this specific file
+          setUploadStatus(`Successfully uploaded ${file.name}`);
+        } catch (error) {
+          console.error('Upload error:', error);
+          setUploadStatus(`Failed to upload ${file.name}. Continuing with remaining files...`);
         } finally {
           eventSource.close();
         }
