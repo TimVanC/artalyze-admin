@@ -251,22 +251,20 @@ const ManageDay = () => {
 
   return (
     <div className="manage-day-container">
-      <h1>Manage Daily Pairs</h1>
-      
-      <div className="info-box">
-        <p>View and manage automatically scheduled image pairs:</p>
-        <ul>
-          <li>Select a date to view its scheduled pairs</li>
-          <li>Click on any image to enlarge it</li>
-          <li>Use checkboxes to select pairs for bulk operations</li>
-          <li>Use the regenerate button to create a new AI variation</li>
-          <li>Use the delete button to remove a pair completely</li>
-          <li>Use bulk operations to regenerate or delete selected pairs</li>
-        </ul>
+      <div className="page-header">
+        <h1>Manage Daily Image Pairs</h1>
+        <div className="instructions">
+          <span>Select a date to view pairs • Click images to enlarge • Use checkboxes for bulk operations • Regenerate AI variations • Delete pairs</span>
+        </div>
       </div>
 
-      <div className="calendar-container">
-        <Calendar onChange={handleDateClick} value={selectedDate} />
+      <div className="calendar-section">
+        <Calendar
+          onChange={setSelectedDate}
+          value={selectedDate}
+          maxDate={new Date()}
+          className="react-calendar"
+        />
       </div>
 
       <div className="date-header">
