@@ -32,7 +32,7 @@
 .calendar-bulk-container {
     display: flex;
     gap: 30px;
-    align-items: flex-start;
+    align-items: flex-end;
     margin-bottom: 20px;
     justify-content: center;
 }
