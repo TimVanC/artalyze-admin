@@ -23,7 +23,7 @@ const ManageDay = () => {
     try {
       const adjustedDate = new Date(selectedDate);
       adjustedDate.setUTCHours(5, 0, 0, 0);
-      const formattedDate = adjustedDate.toISOString().split("T")[0];
+      const formattedDate = adjustedDate.toISOString().slice(0, 10);
 
       console.log('Fetching pairs for date:', formattedDate);
       const response = await axiosInstance.get(`/admin/get-image-pairs-by-date/${formattedDate}`);
@@ -211,10 +211,9 @@ const ManageDay = () => {
   // Function to get tile class based on pair count
   const getTileClass = ({ date, view }) => {
     if (view !== 'month') return '';
-    
-    const dateString = date.toISOString().split('T')[0];
+    // Always use UTC YYYY-MM-DD
+    const dateString = date.toISOString().slice(0, 10);
     const count = pairCounts[dateString] || 0;
-    
     if (count >= 5) return 'calendar-day-complete';
     if (count >= 1) return 'calendar-day-partial';
     return 'calendar-day-empty';
