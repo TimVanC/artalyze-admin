@@ -19,51 +19,46 @@ const ManageDay = () => {
   const [pairCounts, setPairCounts] = useState({});
 
   // Fetch image pairs for the selected date
-  const fetchImagePairs = useCallback(async () => {
+  const fetchImagePairs = async (date) => {
+    console.log('Fetching pairs for date:', date.toISOString().slice(0, 10));
+    setIsLoading(true);
+    setError(null);
     try {
-      const adjustedDate = new Date(selectedDate);
-      adjustedDate.setUTCHours(5, 0, 0, 0);
-      const formattedDate = adjustedDate.toISOString().slice(0, 10);
-
-      console.log('Fetching pairs for date:', formattedDate);
-      const response = await axiosInstance.get(`/admin/get-image-pairs-by-date/${formattedDate}`);
-      console.log('Received pairs:', response.data);
-
-      if (response.data) {
-        setImagePairs(response.data.pairs || []);
-        setMessage('');
-        // Clear selections when changing dates
-        setSelectedPairs(new Set());
-      } else {
-        setImagePairs([]);
-        setMessage('No pairs scheduled for this date.');
-        setSelectedPairs(new Set());
-      }
-    } catch (error) {
-      console.error('Error fetching image pairs:', error);
-      setError('Failed to fetch image pairs. Please try again.');
-      setImagePairs([]);
-      setSelectedPairs(new Set());
+      const response = await axiosInstance.get(`/admin/image-pairs/${date.toISOString().slice(0, 10)}`);
+      console.log('Pairs received:', response.data);
+      setImagePairs(response.data);
+      setSelectedPairs(new Set()); // Reset selections when changing dates
+    } catch (err) {
+      console.error('Error fetching image pairs:', err);
+      setError('Failed to fetch image pairs');
+    } finally {
+      setIsLoading(false);
     }
-  }, [selectedDate]);
+  };
 
   // Fetch pair counts for all days
   const fetchPairCounts = async () => {
     try {
+      console.log('Fetching pair counts...');
       const response = await axiosInstance.get('/admin/pair-counts');
+      console.log('Pair counts received:', response.data);
       setPairCounts(response.data);
     } catch (err) {
       console.error('Error fetching pair counts:', err);
+      // Don't set error state for pair counts, just log it
     }
   };
 
+  // Load pair counts only once on component mount
   useEffect(() => {
     fetchPairCounts();
-  }, []);
+  }, []); // Empty dependency array - only run once
 
   useEffect(() => {
-    fetchImagePairs();
-  }, [fetchImagePairs]);
+    if (selectedDate) {
+      fetchImagePairs(selectedDate);
+    }
+  }, [selectedDate]);
 
   const handleDateClick = (date) => {
     setSelectedDate(date);
@@ -233,7 +228,6 @@ const ManageDay = () => {
           <Calendar
             onChange={setSelectedDate}
             value={selectedDate}
-            maxDate={new Date()}
             className="react-calendar"
             tileClassName={getTileClass}
           />
