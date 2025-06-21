@@ -297,10 +297,7 @@ const ManageDay = () => {
                     Regenerating...
                   </>
                 ) : (
-                  <>
-                    <span className="bulk-regenerate-icon">⟳</span>
-                    Regenerate Selected
-                  </>
+                  'Regenerate Selected'
                 )}
               </button>
               <button 
@@ -314,10 +311,7 @@ const ManageDay = () => {
                     Deleting...
                   </>
                 ) : (
-                  <>
-                    <span className="bulk-delete-icon">×</span>
-                    Delete Selected
-                  </>
+                  'Delete Selected'
                 )}
               </button>
             </div>
@@ -390,10 +384,7 @@ const ManageDay = () => {
                           Regenerating...
                         </>
                       ) : (
-                        <>
-                          <span className="regenerate-icon">⟳</span>
-                          Regenerate AI
-                        </>
+                        'Regenerate AI'
                       )}
                     </button>
                     <button 
@@ -407,10 +398,7 @@ const ManageDay = () => {
                           Deleting...
                         </>
                       ) : (
-                        <>
-                          <span className="delete-icon">×</span>
-                          Delete Pair
-                        </>
+                        'Delete Pair'
                       )}
                     </button>
                   </div>
