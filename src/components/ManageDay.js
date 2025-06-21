@@ -16,6 +16,7 @@ const ManageDay = () => {
   const [loadingPairs, setLoadingPairs] = useState(new Set()); // Track individual pair loading states
   const [bulkLoading, setBulkLoading] = useState(false); // Track bulk operation loading
   const [selectedPairs, setSelectedPairs] = useState(new Set()); // Track selected pairs for bulk operations
+  const [pairCounts, setPairCounts] = useState({});
 
   // Fetch image pairs for the selected date
   const fetchImagePairs = useCallback(async () => {
@@ -45,6 +46,20 @@ const ManageDay = () => {
       setSelectedPairs(new Set());
     }
   }, [selectedDate]);
+
+  // Fetch pair counts for all days
+  const fetchPairCounts = async () => {
+    try {
+      const response = await axiosInstance.get('/admin/pair-counts');
+      setPairCounts(response.data);
+    } catch (err) {
+      console.error('Error fetching pair counts:', err);
+    }
+  };
+
+  useEffect(() => {
+    fetchPairCounts();
+  }, []);
 
   useEffect(() => {
     fetchImagePairs();
@@ -85,41 +100,28 @@ const ManageDay = () => {
   };
 
   const handleRegenerateAI = async (pairId) => {
+    setLoadingPairs(prev => new Set(prev).add(pairId));
     try {
-      // Set individual loading state for this pair
-      setLoadingPairs(prev => {
-        const newSet = new Set(prev);
-        newSet.add(pairId);
-        return newSet;
+      const response = await axiosInstance.post(`/admin/regenerate-ai-image`, {
+        scheduledDate: selectedDate.toISOString().split('T')[0],
+        pairId: pairId
       });
-      setError(null);
       
-      const adjustedDate = new Date(selectedDate);
-      adjustedDate.setUTCHours(5, 0, 0, 0);
-      const formattedDate = adjustedDate.toISOString().split("T")[0];
-      
-      console.log('Regenerating AI image for:', { pairId, formattedDate });
-      const response = await axiosInstance.post('/admin/regenerate-ai-image', {
-        pairId,
-        scheduledDate: formattedDate
-      });
-      console.log('Regenerate response:', response.data);
-
-      // Update the image pairs with the new AI image
+      // Update the specific pair in the list
       setImagePairs(prevPairs => 
         prevPairs.map(pair => 
           pair._id === pairId 
-            ? { ...pair, aiImageURL: response.data.newAiImageUrl }
+            ? { ...pair, aiImageURL: response.data.aiImageURL }
             : pair
         )
       );
-
-      setMessage('AI image regenerated successfully!');
+      
+      setMessage('AI image regenerated successfully');
+      fetchPairCounts(); // Refresh pair counts
     } catch (error) {
+      setError('Failed to regenerate AI image');
       console.error('Error regenerating AI image:', error);
-      setError(error.response?.data?.error || 'Failed to regenerate AI image');
     } finally {
-      // Clear individual loading state for this pair
       setLoadingPairs(prev => {
         const newSet = new Set(prev);
         newSet.delete(pairId);
@@ -129,41 +131,29 @@ const ManageDay = () => {
   };
 
   const handleDeletePair = async (pairId) => {
-    if (!window.confirm('Are you sure you want to delete this pair? This action cannot be undone.')) {
-      return;
-    }
-
+    setLoadingPairs(prev => new Set(prev).add(pairId));
     try {
-      // Set individual loading state for this pair
-      setLoadingPairs(prev => new Set(prev).add(pairId));
-      setError(null);
-
-      const adjustedDate = new Date(selectedDate);
-      adjustedDate.setUTCHours(5, 0, 0, 0);
-      const formattedDate = adjustedDate.toISOString().split("T")[0];
-
-      console.log('Deleting pair:', { pairId, formattedDate });
-      await axiosInstance.delete('/admin/delete-pair', {
+      await axiosInstance.delete(`/admin/delete-pair`, {
         data: {
-          pairId,
-          scheduledDate: formattedDate
+          scheduledDate: selectedDate.toISOString().split('T')[0],
+          pairId: pairId
         }
       });
-
-      // Remove the deleted pair from the state
+      
+      // Remove the pair from the list
       setImagePairs(prevPairs => prevPairs.filter(pair => pair._id !== pairId));
-      // Remove from selected pairs
       setSelectedPairs(prev => {
         const newSet = new Set(prev);
         newSet.delete(pairId);
         return newSet;
       });
-      setMessage('Image pair deleted successfully!');
+      
+      setMessage('Image pair deleted successfully');
+      fetchPairCounts(); // Refresh pair counts
     } catch (error) {
-      console.error('Error deleting pair:', error);
-      setError(error.response?.data?.error || 'Failed to delete image pair');
+      setError('Failed to delete image pair');
+      console.error('Error deleting image pair:', error);
     } finally {
-      // Clear individual loading state for this pair
       setLoadingPairs(prev => {
         const newSet = new Set(prev);
         newSet.delete(pairId);
@@ -173,35 +163,20 @@ const ManageDay = () => {
   };
 
   const handleBulkRegenerate = async () => {
-    if (selectedPairs.size === 0) {
-      setError('Please select at least one pair to regenerate.');
+    if (selectedPairs.size === 0) return;
+    
+    if (!window.confirm(`Are you sure you want to regenerate ${selectedPairs.size} AI images?`)) {
       return;
     }
 
-    if (!window.confirm(`Are you sure you want to regenerate ${selectedPairs.size} AI images? This may take several minutes.`)) {
-      return;
-    }
-
+    setBulkLoading(true);
+    const promises = Array.from(selectedPairs).map(pairId => handleRegenerateAI(pairId));
+    
     try {
-      setBulkLoading(true);
-      setError(null);
-      
-      const adjustedDate = new Date(selectedDate);
-      adjustedDate.setUTCHours(5, 0, 0, 0);
-      const formattedDate = adjustedDate.toISOString().split("T")[0];
-      
-      console.log('Bulk regenerating selected AI images for:', formattedDate);
-      const response = await axiosInstance.post('/admin/bulk-regenerate-selected-ai-images', {
-        scheduledDate: formattedDate,
-        pairIds: Array.from(selectedPairs)
-      });
-      console.log('Bulk regenerate response:', response.data);
-
-      // Update the image pairs with new AI images
-      setImagePairs(response.data.updatedPairs);
-      setMessage(`Successfully regenerated ${response.data.updatedPairs.length} AI images!`);
-      // Clear selections after successful operation
+      await Promise.all(promises);
+      setMessage(`Successfully regenerated ${selectedPairs.size} AI images!`);
       setSelectedPairs(new Set());
+      fetchPairCounts(); // Refresh pair counts
     } catch (error) {
       console.error('Error bulk regenerating AI images:', error);
       setError(error.response?.data?.error || 'Failed to bulk regenerate AI images');
@@ -211,42 +186,38 @@ const ManageDay = () => {
   };
 
   const handleBulkDelete = async () => {
-    if (selectedPairs.size === 0) {
-      setError('Please select at least one pair to delete.');
-      return;
-    }
-
+    if (selectedPairs.size === 0) return;
+    
     if (!window.confirm(`Are you sure you want to delete ${selectedPairs.size} image pairs? This action cannot be undone.`)) {
       return;
     }
 
+    setBulkLoading(true);
+    const promises = Array.from(selectedPairs).map(pairId => handleDeletePair(pairId));
+    
     try {
-      setBulkLoading(true);
-      setError(null);
-
-      const adjustedDate = new Date(selectedDate);
-      adjustedDate.setUTCHours(5, 0, 0, 0);
-      const formattedDate = adjustedDate.toISOString().split("T")[0];
-
-      console.log('Bulk deleting selected pairs for:', formattedDate);
-      await axiosInstance.delete('/admin/bulk-delete-selected-pairs', {
-        data: {
-          scheduledDate: formattedDate,
-          pairIds: Array.from(selectedPairs)
-        }
-      });
-
-      // Remove deleted pairs from state
-      setImagePairs(prevPairs => prevPairs.filter(pair => !selectedPairs.has(pair._id)));
+      await Promise.all(promises);
       setMessage(`Successfully deleted ${selectedPairs.size} image pairs!`);
-      // Clear selections after successful operation
       setSelectedPairs(new Set());
+      fetchPairCounts(); // Refresh pair counts
     } catch (error) {
       console.error('Error bulk deleting pairs:', error);
       setError(error.response?.data?.error || 'Failed to bulk delete image pairs');
     } finally {
       setBulkLoading(false);
     }
+  };
+
+  // Function to get tile class based on pair count
+  const getTileClass = ({ date, view }) => {
+    if (view !== 'month') return '';
+    
+    const dateString = date.toISOString().split('T')[0];
+    const count = pairCounts[dateString] || 0;
+    
+    if (count >= 5) return 'calendar-day-complete';
+    if (count >= 1) return 'calendar-day-partial';
+    return 'calendar-day-empty';
   };
 
   return (
@@ -265,6 +236,7 @@ const ManageDay = () => {
             value={selectedDate}
             maxDate={new Date()}
             className="react-calendar"
+            tileClassName={getTileClass}
           />
         </div>
 

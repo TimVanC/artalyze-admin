@@ -91,6 +91,36 @@
     color: #333 !important;
 }
 
+.calendar-day-complete {
+    background-color: #d4edda !important;
+    color: #155724 !important;
+}
+
+.calendar-day-complete:hover {
+    background-color: #c3e6cb !important;
+    color: #155724 !important;
+}
+
+.calendar-day-partial {
+    background-color: #fff3cd !important;
+    color: #856404 !important;
+}
+
+.calendar-day-partial:hover {
+    background-color: #ffeaa7 !important;
+    color: #856404 !important;
+}
+
+.calendar-day-empty {
+    background-color: #f8d7da !important;
+    color: #721c24 !important;
+}
+
+.calendar-day-empty:hover {
+    background-color: #f5c6cb !important;
+    color: #721c24 !important;
+}
+
 .info-box {
     background-color: #f5f5f5;
     border: 1px solid #e0e0e0;
