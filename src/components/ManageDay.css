@@ -29,10 +29,15 @@
     line-height: 1.4;
 }
 
-.calendar-section {
+.calendar-bulk-container {
     display: flex;
-    justify-content: center;
+    gap: 30px;
+    align-items: flex-start;
     margin-bottom: 20px;
+}
+
+.calendar-section {
+    flex: 0 0 auto;
 }
 
 .react-calendar {
@@ -497,12 +502,13 @@
 }
 
 .bulk-actions {
+    flex: 1;
     background-color: white;
     border-radius: 12px;
     padding: 20px;
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
-    margin-bottom: 20px;
     border: 2px solid #e9ecef;
+    margin-bottom: 0;
 }
 
 .selection-controls {

@@ -258,18 +258,17 @@ const ManageDay = () => {
         </div>
       </div>
 
-      <div className="calendar-section">
-        <Calendar
-          onChange={setSelectedDate}
-          value={selectedDate}
-          maxDate={new Date()}
-          className="react-calendar"
-        />
-      </div>
+      <div className="calendar-bulk-container">
+        <div className="calendar-section">
+          <Calendar
+            onChange={setSelectedDate}
+            value={selectedDate}
+            maxDate={new Date()}
+            className="react-calendar"
+          />
+        </div>
 
-      <div className="date-header">
-        <h2>Pairs for {selectedDate.toDateString()}</h2>
-        {imagePairs.length > 0 && (
+        {selectedDate && (
           <div className="bulk-actions">
             <div className="selection-controls">
               <button 
@@ -277,7 +276,7 @@ const ManageDay = () => {
                 onClick={handleSelectAll}
                 disabled={bulkLoading || loadingPairs.size > 0}
               >
-                {selectedPairs.size === imagePairs.length ? 'Deselect All' : 'Select All'}
+                {selectedPairs.size === imagePairs.length && imagePairs.length > 0 ? 'Deselect All' : 'Select All'}
               </button>
               <span className="selection-count">
                 {selectedPairs.size} of {imagePairs.length} selected
@@ -316,6 +315,12 @@ const ManageDay = () => {
           </div>
         )}
       </div>
+
+      {selectedDate && (
+        <div className="date-header">
+          <h2>Pairs for {selectedDate.toDateString()}</h2>
+        </div>
+      )}
 
       {error && <div className="error-message">{error}</div>}
       {message && <div className="info-message">{message}</div>}
