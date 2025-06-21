@@ -9,7 +9,6 @@ import './ManageDay.css';
 const ManageDay = () => {
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [imagePairs, setImagePairs] = useState([]);
-  const [pendingImages, setPendingImages] = useState([]);
   const [error, setError] = useState(null);
   const [message, setMessage] = useState('');
   const [selectedImage, setSelectedImage] = useState(null);
@@ -31,13 +30,11 @@ const ManageDay = () => {
 
       if (response.data) {
         setImagePairs(response.data.pairs || []);
-        setPendingImages(response.data.pendingHumanImages || []);
         setMessage('');
         // Clear selections when changing dates
         setSelectedPairs(new Set());
       } else {
         setImagePairs([]);
-        setPendingImages([]);
         setMessage('No pairs scheduled for this date.');
         setSelectedPairs(new Set());
       }
@@ -45,7 +42,6 @@ const ManageDay = () => {
       console.error('Error fetching image pairs:', error);
       setError('Failed to fetch image pairs. Please try again.');
       setImagePairs([]);
-      setPendingImages([]);
       setSelectedPairs(new Set());
     }
   }, [selectedDate]);
@@ -303,7 +299,7 @@ const ManageDay = () => {
                 ) : (
                   <>
                     <span className="bulk-regenerate-icon">⟳</span>
-                    Regenerate Selected ({selectedPairs.size})
+                    Regenerate Selected
                   </>
                 )}
               </button>
@@ -320,7 +316,7 @@ const ManageDay = () => {
                 ) : (
                   <>
                     <span className="bulk-delete-icon">×</span>
-                    Delete Selected ({selectedPairs.size})
+                    Delete Selected
                   </>
                 )}
               </button>
@@ -423,25 +419,6 @@ const ManageDay = () => {
             })}
           </div>
         )}
-      </div>
-
-      {/* Display pending human images */}
-      <div className="pending-images-container">
-        <h3>Pending Human Images</h3>
-        <p className="info-text">These images are queued for AI pair generation</p>
-        <div className="pending-images-grid">
-          {pendingImages.map((image, index) => (
-            <div key={index} className="pending-image-wrapper">
-              <img 
-                src={image.url} 
-                alt={`Pending Human Art ${index + 1}`} 
-                className="image-preview"
-                onClick={() => handleImageClick(image.url)}
-              />
-              <p>Uploaded {new Date(image.uploadedAt).toLocaleTimeString()}</p>
-            </div>
-          ))}
-        </div>
       </div>
 
       {selectedImage && (
