@@ -400,8 +400,9 @@
 }
 
 .regenerate-icon {
-    font-size: 1rem;
+    font-size: 1.2rem;
     font-weight: bold;
+    margin-right: 6px;
 }
 
 .delete-button {
@@ -418,6 +419,12 @@
     background-color: #cccccc;
     cursor: not-allowed;
     opacity: 0.7;
+}
+
+.delete-icon {
+    font-size: 1.2rem;
+    font-weight: bold;
+    margin-right: 6px;
 }
 
 .bulk-actions {
@@ -513,4 +520,16 @@
     background-color: #cccccc;
     cursor: not-allowed;
     transform: none;
+}
+
+.bulk-regenerate-icon {
+    font-size: 1.1rem;
+    font-weight: bold;
+    margin-right: 8px;
+}
+
+.bulk-delete-icon {
+    font-size: 1.1rem;
+    font-weight: bold;
+    margin-right: 8px;
 }

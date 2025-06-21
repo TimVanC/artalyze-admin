@@ -65,44 +65,35 @@ const ManageDay = () => {
 
   // Handle individual pair selection
   const handlePairSelection = (pairId) => {
-    console.log('Pair selection clicked:', pairId);
     setSelectedPairs(prev => {
       const newSet = new Set(prev);
       if (newSet.has(pairId)) {
         newSet.delete(pairId);
-        console.log('Deselected pair:', pairId);
       } else {
         newSet.add(pairId);
-        console.log('Selected pair:', pairId);
       }
-      console.log('Updated selected pairs:', Array.from(newSet));
       return newSet;
     });
   };
 
   // Handle select all/none
   const handleSelectAll = () => {
-    console.log('Select all clicked. Current selected:', selectedPairs.size, 'Total pairs:', imagePairs.length);
     if (selectedPairs.size === imagePairs.length) {
       // If all are selected, deselect all
-      console.log('Deselecting all pairs');
       setSelectedPairs(new Set());
     } else {
       // Select all
       const allPairIds = imagePairs.map(pair => pair._id);
-      console.log('Selecting all pairs:', allPairIds);
       setSelectedPairs(new Set(allPairIds));
     }
   };
 
   const handleRegenerateAI = async (pairId) => {
-    console.log('Starting regeneration for pair:', pairId);
     try {
       // Set individual loading state for this pair
       setLoadingPairs(prev => {
         const newSet = new Set(prev);
         newSet.add(pairId);
-        console.log('Added pair to loading set:', pairId, 'Total loading:', newSet.size);
         return newSet;
       });
       setError(null);
@@ -136,7 +127,6 @@ const ManageDay = () => {
       setLoadingPairs(prev => {
         const newSet = new Set(prev);
         newSet.delete(pairId);
-        console.log('Removed pair from loading set:', pairId, 'Remaining loading:', newSet.size);
         return newSet;
       });
     }
@@ -305,14 +295,34 @@ const ManageDay = () => {
                 onClick={handleBulkRegenerate}
                 disabled={bulkLoading || loadingPairs.size > 0 || selectedPairs.size === 0}
               >
-                {bulkLoading ? '🔄 Regenerating...' : `🔄 Regenerate Selected (${selectedPairs.size})`}
+                {bulkLoading ? (
+                  <>
+                    <span className="spinner"></span>
+                    Regenerating...
+                  </>
+                ) : (
+                  <>
+                    <span className="bulk-regenerate-icon">⟳</span>
+                    Regenerate Selected ({selectedPairs.size})
+                  </>
+                )}
               </button>
               <button 
                 className="bulk-delete-button"
                 onClick={handleBulkDelete}
                 disabled={bulkLoading || loadingPairs.size > 0 || selectedPairs.size === 0}
               >
-                {bulkLoading ? '🗑️ Deleting...' : `🗑️ Delete Selected (${selectedPairs.size})`}
+                {bulkLoading ? (
+                  <>
+                    <span className="spinner"></span>
+                    Deleting...
+                  </>
+                ) : (
+                  <>
+                    <span className="bulk-delete-icon">×</span>
+                    Delete Selected ({selectedPairs.size})
+                  </>
+                )}
               </button>
             </div>
           </div>
@@ -321,22 +331,6 @@ const ManageDay = () => {
 
       {error && <div className="error-message">{error}</div>}
       {message && <div className="info-message">{message}</div>}
-
-      {/* Debug section - remove this after testing */}
-      <div style={{ 
-        background: '#f0f0f0', 
-        padding: '10px', 
-        margin: '10px 0', 
-        borderRadius: '4px',
-        fontSize: '12px',
-        fontFamily: 'monospace'
-      }}>
-        <strong>Debug Info:</strong><br/>
-        Selected pairs: {selectedPairs.size} of {imagePairs.length}<br/>
-        Loading pairs: {loadingPairs.size}<br/>
-        Bulk loading: {bulkLoading ? 'true' : 'false'}<br/>
-        Selected IDs: {Array.from(selectedPairs).join(', ')}
-      </div>
 
       {/* Display completed pairs */}
       <div className="existing-image-pairs-container">
@@ -348,13 +342,6 @@ const ManageDay = () => {
             {imagePairs.map((pair, index) => {
               const isPairLoading = loadingPairs.has(pair._id);
               const isSelected = selectedPairs.has(pair._id);
-              console.log(`Rendering pair ${index + 1}:`, {
-                pairId: pair._id,
-                isSelected,
-                isPairLoading,
-                selectedPairsSize: selectedPairs.size,
-                loadingPairsSize: loadingPairs.size
-              });
               return (
                 <div key={pair._id || index} className={`existing-pair-container ${isSelected ? 'selected' : ''}`}>
                   <div className="pair-header">
@@ -408,7 +395,7 @@ const ManageDay = () => {
                         </>
                       ) : (
                         <>
-                          <span className="regenerate-icon">↻</span>
+                          <span className="regenerate-icon">⟳</span>
                           Regenerate AI
                         </>
                       )}
@@ -424,7 +411,10 @@ const ManageDay = () => {
                           Deleting...
                         </>
                       ) : (
-                        'Delete Pair'
+                        <>
+                          <span className="delete-icon">×</span>
+                          Delete Pair
+                        </>
                       )}
                     </button>
                   </div>
