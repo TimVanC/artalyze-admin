@@ -121,6 +121,17 @@
     color: #721c24 !important;
 }
 
+.calendar-day-selected {
+    background-color: #d1ecf1 !important;
+    color: #0c5460 !important;
+    font-weight: bold !important;
+}
+
+.calendar-day-selected:hover {
+    background-color: #bee5eb !important;
+    color: #0c5460 !important;
+}
+
 .info-box {
     background-color: #f5f5f5;
     border: 1px solid #e0e0e0;

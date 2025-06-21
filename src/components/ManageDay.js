@@ -208,6 +208,13 @@ const ManageDay = () => {
     if (view !== 'month') return '';
     // Always use UTC YYYY-MM-DD
     const dateString = date.toISOString().slice(0, 10);
+    const selectedDateString = selectedDate.toISOString().slice(0, 10);
+    
+    // Check if this is the currently selected date
+    if (dateString === selectedDateString) {
+      return 'calendar-day-selected';
+    }
+    
     const count = pairCounts[dateString] || 0;
     if (count >= 5) return 'calendar-day-complete';
     if (count >= 1) return 'calendar-day-partial';
