@@ -1,17 +1,17 @@
 import { BASE_URL } from "./config";
 import axios from "axios";
 
-// Configure axios instance for admin API requests
+// Configure Axios instance for admin API requests
 const axiosInstance = axios.create({
   baseURL: BASE_URL,
-  timeout: 30000,
   withCredentials: true,
+  timeout: 120000, // 2 minutes timeout for DALL-E 3 generation
   headers: {
     "Content-Type": "application/json",
   },
 });
 
-// Add authentication token to all outgoing requests
+// Add authentication token to all requests
 axiosInstance.interceptors.request.use((config) => {
   const token = localStorage.getItem('adminToken');
   if (token) {
@@ -19,17 +19,5 @@ axiosInstance.interceptors.request.use((config) => {
   }
   return config;
 });
-
-// Handle authentication errors and redirect to login if needed
-axiosInstance.interceptors.response.use(
-  (response) => response,
-  (error) => {
-    if (error.response?.status === 401) {
-      localStorage.removeItem('adminToken');
-      window.location.href = '/login';
-    }
-    return Promise.reject(error);
-  }
-);
 
 export default axiosInstance;
