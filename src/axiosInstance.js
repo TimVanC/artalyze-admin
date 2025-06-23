@@ -1,9 +1,10 @@
-import { STAGING_BASE_URL } from "./config";
+import { BASE_URL } from "./config";
 import axios from "axios";
 
 // Configure axios instance for admin API requests
 const axiosInstance = axios.create({
-  baseURL: STAGING_BASE_URL,
+  baseURL: BASE_URL,
+  timeout: 30000,
   withCredentials: true,
   headers: {
     "Content-Type": "application/json",

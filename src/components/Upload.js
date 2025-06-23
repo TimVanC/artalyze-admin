@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import DropzoneComponent from './DropzoneComponent';
 import axiosInstance from '../axiosInstance';
 import { v4 as uuidv4 } from 'uuid';
-import { STAGING_BASE_URL } from '../config';
+import { BASE_URL } from '../config';
 import './Upload.css';
 
 const Upload = () => {
@@ -49,7 +49,7 @@ const Upload = () => {
     }
 
     try {
-      const url = new URL(`${STAGING_BASE_URL}/admin/progress-updates/${sessionId}`);
+      const url = new URL(`${BASE_URL}/admin/progress-updates/${sessionId}`);
       url.searchParams.append('token', token); // Send raw token
       
       console.log('Establishing SSE connection:', url.toString());
