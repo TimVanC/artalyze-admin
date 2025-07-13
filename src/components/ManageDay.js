@@ -157,6 +157,28 @@ const ManageDay = () => {
     }
   };
 
+  const handleDuplicatePair = async (pairId) => {
+    setLoadingPairs(prev => new Set(prev).add(pairId));
+    try {
+      const response = await axiosInstance.post(`/admin/duplicate-pair`, {
+        scheduledDate: selectedDate.toISOString().split('T')[0],
+        pairId: pairId
+      });
+      
+      setMessage(`Image pair duplicated successfully to ${response.data.targetDate}`);
+      fetchPairCounts(); // Refresh pair counts
+    } catch (error) {
+      setError('Failed to duplicate image pair');
+      console.error('Error duplicating image pair:', error);
+    } finally {
+      setLoadingPairs(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(pairId);
+        return newSet;
+      });
+    }
+  };
+
   const handleBulkRegenerate = async () => {
     if (selectedPairs.size === 0) return;
     
@@ -360,6 +382,20 @@ const ManageDay = () => {
                         </>
                       ) : (
                         'Regenerate AI'
+                      )}
+                    </button>
+                    <button 
+                      className="duplicate-button"
+                      onClick={() => handleDuplicatePair(pair._id)}
+                      disabled={isPairLoading || bulkLoading}
+                    >
+                      {isPairLoading ? (
+                        <>
+                          <span className="spinner"></span>
+                          Duplicating...
+                        </>
+                      ) : (
+                        'Duplicate'
                       )}
                     </button>
                     <button 
