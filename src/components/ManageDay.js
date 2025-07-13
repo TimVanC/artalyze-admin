@@ -225,6 +225,29 @@ const ManageDay = () => {
     }
   };
 
+  const handleBulkDuplicate = async () => {
+    if (selectedPairs.size === 0) return;
+    
+    if (!window.confirm(`Are you sure you want to duplicate ${selectedPairs.size} image pairs to the next available date?`)) {
+      return;
+    }
+
+    setBulkLoading(true);
+    const promises = Array.from(selectedPairs).map(pairId => handleDuplicatePair(pairId));
+    
+    try {
+      await Promise.all(promises);
+      setMessage(`Successfully duplicated ${selectedPairs.size} image pairs!`);
+      setSelectedPairs(new Set());
+      fetchPairCounts(); // Refresh pair counts
+    } catch (error) {
+      console.error('Error bulk duplicating pairs:', error);
+      setError(error.response?.data?.error || 'Failed to bulk duplicate image pairs');
+    } finally {
+      setBulkLoading(false);
+    }
+  };
+
   // Function to get tile class based on pair count
   const getTileClass = ({ date, view }) => {
     if (view !== 'month') return '';
@@ -288,7 +311,21 @@ const ManageDay = () => {
                     Regenerating...
                   </>
                 ) : (
-                  'Regenerate Selected'
+                  'Regenerate'
+                )}
+              </button>
+              <button 
+                className="bulk-duplicate-button"
+                onClick={handleBulkDuplicate}
+                disabled={bulkLoading || loadingPairs.size > 0 || selectedPairs.size === 0}
+              >
+                {bulkLoading ? (
+                  <>
+                    <span className="spinner"></span>
+                    Duplicating...
+                  </>
+                ) : (
+                  'Duplicate'
                 )}
               </button>
               <button 
@@ -302,7 +339,7 @@ const ManageDay = () => {
                     Deleting...
                   </>
                 ) : (
-                  'Delete Selected'
+                  'Delete'
                 )}
               </button>
             </div>
@@ -381,7 +418,7 @@ const ManageDay = () => {
                           Regenerating...
                         </>
                       ) : (
-                        'Regenerate AI'
+                        'Regenerate'
                       )}
                     </button>
                     <button 
@@ -409,7 +446,7 @@ const ManageDay = () => {
                           Deleting...
                         </>
                       ) : (
-                        'Delete Pair'
+                        'Delete'
                       )}
                     </button>
                   </div>

@@ -613,43 +613,55 @@
 }
 
 .bulk-regenerate-button,
+.bulk-duplicate-button,
 .bulk-delete-button {
     padding: 10px 20px;
     border: none;
-    border-radius: 8px;
-    font-size: 0.9rem;
-    font-weight: 600;
+    border-radius: 6px;
     cursor: pointer;
-    transition: all 0.3s ease;
-    min-width: 140px;
+    font-size: 0.9rem;
+    font-weight: 500;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 120px;
+    justify-content: center;
 }
 
 .bulk-regenerate-button {
-    background-color: #2196F3;
+    background-color: #28a745;
     color: white;
 }
 
 .bulk-regenerate-button:hover:not(:disabled) {
-    background-color: #1976D2;
-    transform: translateY(-2px);
-    box-shadow: 0 6px 20px rgba(33, 150, 243, 0.3);
+    background-color: #218838;
+}
+
+.bulk-duplicate-button {
+    background-color: #17a2b8;
+    color: white;
+}
+
+.bulk-duplicate-button:hover:not(:disabled) {
+    background-color: #138496;
 }
 
 .bulk-delete-button {
-    background-color: #f44336;
+    background-color: #dc3545;
     color: white;
 }
 
 .bulk-delete-button:hover:not(:disabled) {
-    background-color: #d32f2f;
-    transform: translateY(-2px);
-    box-shadow: 0 6px 20px rgba(244, 67, 54, 0.3);
+    background-color: #c82333;
 }
 
 .select-all-button:disabled,
 .bulk-regenerate-button:disabled,
+.bulk-duplicate-button:disabled,
 .bulk-delete-button:disabled {
-    background-color: #cccccc;
+    background-color: #6c757d;
+    color: #adb5bd;
     cursor: not-allowed;
     transform: none;
     box-shadow: none;
